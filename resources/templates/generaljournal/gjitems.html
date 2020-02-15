@@ -1,0 +1,25 @@
+<table class="table">
+    <caption>Siste bilag</caption>
+    <thead>
+    <tr>
+        <th>Bilag</th>
+        <th>Dato</th>
+        <th>Debet</th>
+        <th>Kredit</th>
+        <th>Tekst</th>
+        <th>Beløp</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for ix in items %}
+        <tr class="rows">
+            <td>{{ix.bilag}}</td>
+            <td>{{ix.date}}</td>
+            <td>{{ix.debit}}</td>
+            <td>{{ix.credit}}</td>
+            <td>{{ix.text}}</td>
+            <td>{{ix.amount}}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>

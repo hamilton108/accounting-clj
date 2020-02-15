@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <title>General Journal</title>
+  <meta charset="UTF-8"> {% include "templates/head.html" %}
+  </meta>
+  <script src="/js/generaljournal.js"></script>
+</head>
+
+<body>
+  <div class="logo"></div>
+  <div class="container">
+    <div class="row">
+      <div class="col-md-6">
+        <form role="form">
+          <div class="form-group">
+            <label for="curdate">Dato:</label>
+            <input type="date" class="form-control" id="curdate">
+          </div>
+          <div class="form-group">
+            <label for="preset">Predefinert:</label>
+            <select class="form-control" name="preset" id="preset">
+                        <option value="-1">-</option>
+                        <option value="1">1 - Taxi</option>
+                        <option value="2">2 - Datautstyr</option>
+                        <option value="3">3 - NextGenTel</option>
+                        <option value="4">4 - NetCom</option>
+                        <option value="5">5 - Telenor</option>
+                        <option value="6">6 - Obos</option>
+                        <option value="7">7 - Hafslund</option>
+                        <option value="8">8 - Lunsj</option>
+                        <option value="9">9 - Overtidsmat</option>
+                        <option value="10">10 - Ruter mnd kort</option>
+                    </select>
+          </div>
+          <div class="form-group">
+            <label for="credit" style="display:block;">Kredit:</label>
+            <select class="form-control" name="preset" id="credit">
+                        {% for konto in ns4102 %}
+                        <option value="{{konto.value}}">{{konto.name}}</option>
+                        {% endfor %}
+                    </select>
+          </div>
+          <div class="form-group">
+            <label for="debit" style="display:block;">Debet:</label>
+            <select class="form-control" name="preset" id="debit">
+                        {% for konto in ns4102 %}
+                        <option value="{{konto.value}}">{{konto.name}}</option>
+                        {% endfor %}
+                    </select>
+          </div>
+          <div class="form-group">
+            <label for="desc">Tekst:</label>
+            <input type="text" class="form-control" id="desc" value="-">
+          </div>
+          <div class="form-group">
+            <label for="bilag">Bilag:</label>
+            <input type="number" class="form-control" id="bilag" value="{{bilag}}">
+            <em>Siste bilagsdato: {{bilag-dx}}</em>
+            <em>Siste dato: {{last-date}}</em>
+          </div>
+          <div class="form-group">
+            <label for="amount">Beløp:</label>
+            <input type="number" step="0.1" class="form-control" id="amount" value="0.0">
+          </div>
+        </form>
+      </div>
+      <div class="col-md-6">
+        <div class="form-group">
+          <label for="mvaamt">Mva beløp:</label>
+          <input type="number" step="0.1" class="form-control" id="mvaamt" value="0.0">
+        </div>
+        <div class="form-group">
+          <label for="mva">MVA:</label>
+          <select class="form-control" name="preset" id="mva">
+                    <option value="-1">0 %</option>
+                    <option value="2714">8 % (Lav sats)</option>
+                    <option value="2713">15 % (Middel sats)</option>
+                    <option value="2711" selected>25 % (Høy sats)</option>
+                </select>
+        </div>
+        <div class="checkbox">
+          <label><input id="incbilag" type="checkbox" checked="">Inkrementer bilag:</label>
+        </div>
+        <button type="button" class="btn btn-default" id="insertkassadagbok">Oppdater</button>
+        <button type="button" class="btn btn-default" id="insertinvoice">Faktura</button>
+        <br>
+        <br>
+        <p id="feedback">
+          <table class="table">
+            <caption>Siste bilag</caption>
+            <thead>
+              <tr>
+                <th>Bilag</th>
+                <th>Dato</th>
+                <th>Debet</th>
+                <th>Kredit</th>
+                <th>Tekst</th>
+                <th>Beløp</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for ix in items %}
+              <tr class="rows">
+                <td>{{ix.bilag}}</td>
+                <td>{{ix.date}}</td>
+                <td>{{ix.debit}}</td>
+                <td>{{ix.credit}}</td>
+                <td>{{ix.text}}</td>
+                <td>{{ix.amount}}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </p>
+      </div>
+    </div>
+  </div>
+  {% include "templates/footer.html" %}
+</body>
+
+</html>
