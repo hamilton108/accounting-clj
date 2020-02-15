@@ -3,6 +3,7 @@
   (:require
     [gj.generaljournal.dbx :as DBX]
     [gj.generaljournal.html :as GJ]
+    [gj.hourlist.html :as HRL]
     [selmer.parser :as P]
     [compojure.route :as R])
   (:use
@@ -23,8 +24,10 @@
       (handler req))))
 
 (defroutes main-routes
-  ;(GET "/" request (init))
-  (GET "/" request (GJ/general-journal))
+  (GET "/" request (init))
+  ;(GET "/" request (GJ/general-journal))
+  (context "/generaljournal" [] GJ/my-routes)
+  (context "/hourlist" [] HRL/my-routes)
   (R/files "/" {:root "public"})
   (R/resources "/" {:root "public"}))
 

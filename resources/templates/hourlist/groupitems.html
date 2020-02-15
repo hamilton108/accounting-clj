@@ -1,0 +1,23 @@
+<table class="table hourlistgroupitems">
+    <caption>Overview</caption>
+    <thead>
+    <tr>
+        <th>Active</th>
+        <th>Oid</th>
+        <th>Navn</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for ix in hourlistgroups %}
+        <tr class="rows">
+        {% if ix.active = 1 %}
+            <td><input data-oid="{{ix.oid}}" class="group-active" type="checkbox" checked></td>
+        {% else %}
+            <td><input data-oid="{{ix.oid}}" class="group-active" type="checkbox"></td>
+        {% endif %}
+            <td>{{ix.oid}}</td>
+            <td>{{ix.desc}}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>

@@ -1,16 +1,11 @@
 (ns gj.generaljournal.dbx
   (:import
     [generaljournal.dto GeneralJournalBean]
-    [generaljournal.mybatis
-      GeneralJournalMapper
-      Ns4102Mapper
-      InvoiceMapper
-      Facade])
+    [generaljournal.mybatis GjFacade])
   (:require
     [gj.service.htmlutils :as U]
     [gj.service.db :as DB]
     [gj.service.logservice :as LOG]))
-    ;[clj-json.core :as json]))
 
 (def mva_25 0.2)
 
@@ -20,7 +15,7 @@
 
 (def frac-debs [6300 6340])
 
-(def facade (Facade.))
+(def facade (GjFacade.))
 
 (defn feedback [])
 
@@ -33,23 +28,23 @@
     (.selectByBilag it 5)))
 
 (defn fetch-by-bilag []
-  (.selectByBilag ^Facade facade 5))
+  (.selectByBilag ^GjFacade facade 5))
 
 (defn fetch-by-date []
-  (.selectByDate ^Facade facade 5))
+  (.selectByDate ^GjFacade facade 5))
 
 (def fetch-ns4102
   (memoize (fn []
-    (.selectNs4102 ^Facade facade))))
+    (.selectNs4102 ^GjFacade facade))))
 
-(defn insert-generaljournal [^GeneralJournalBean gj ^GeneralJournalBean mva]
+(comment insert-generaljournal [^GeneralJournalBean gj ^GeneralJournalBean mva]
   (DB/with-session :koteriku GeneralJournalMapper
     (do
       (if-not (nil? mva)
         (.insertGeneralJournal it mva))
       (.insertGeneralJournal it gj))))
 
-(defn update-voucher [voucher invoicenum]
+(comment update-voucher [voucher invoicenum]
   (DB/with-session :koteriku InvoiceMapper
     (.updateVoucher it voucher invoicenum)))
 
@@ -76,8 +71,7 @@
     (LOG/info (str "Bilag: " bilag ", credit: " credit ", debit: " debit
                 ", amount: " amount ", mva: " mva ", mvaamt: " mvaamt
                 ", curdate: " curdate ", calc-mva: " calc-mva))
-
-    (insert-generaljournal gj-bean mva-bean)
+    ;(insert-generaljournal gj-bean mva-bean)
     gj-bean))
 
 (defn insert-invoice [bilag curdate amount invoicenum]
@@ -92,6 +86,6 @@
              gj-bean-inc (GeneralJournalBean. bilag curdate 3700 1500 desc income)
              gj-bean-mva (GeneralJournalBean. bilag curdate 2700 1500 desc mva)]
        (LOG/info (str "Invoice num: " invoicenum))
-       (insert-generaljournal gj-bean-inc gj-bean-mva)
-       (update-voucher bilag invoicenumx)
+       ;(insert-generaljournal gj-bean-inc gj-bean-mva)
+       ;(update-voucher bilag invoicenumx)
      gj-bean-inc))

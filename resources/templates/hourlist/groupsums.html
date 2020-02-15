@@ -1,0 +1,16 @@
+<table class="table">
+    <thead>
+        <tr>
+            <th>Spesifikasjon</th>
+            <th>Sum</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for sx in hourlistsums %}
+    <tr class="rows">
+        <td>{{sx.desc}}</td>
+        <td>{{sx.sum}}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>

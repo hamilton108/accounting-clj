@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <title>.NET Microsoft Prism</title>
+  <meta charset="UTF-8"> {% include "templates/head.html" %}
+  </meta>
+  <script src="/js/hourlist.js"></script>
+</head>
+
+<body>
+  <div class="logo"></div>
+  <div class="container">
+    <div class="row">
+      <div class="col-sm-6">
+        <form role="form">
+          <div class="form-group">
+            <label for="fnr" style="display:block;">Fakturanr:</label>
+            <select class="form-control" id="fnr">
+                                {% for ix in invoices %}
+                                    <option value="{{ix.value}}">{{ix.content}}</option>
+                                {% endfor %}
+                            </select>
+          </div>
+          <div class="form-group">
+            <label for="group" style="display:block;">Gruppe:</label>
+            <select class="form-control" id="group">
+                                {% for gr in hourlistgroups %}
+                                    <option value="{{gr.value}}">{{gr.name}}</option>
+                                {% endfor %}
+                            </select>
+          </div>
+          <div class="form-group">
+            <label for="curdate">Dato:</label>
+            <input class="form-control" type="date" id="curdate">
+          </div>
+          <div class="form-group">
+            <label for="from-time">Fra klokken:</label>
+            <input class="form-control" type="time" step="300" value="08:00" id="from-time">
+          </div>
+          <div class="form-group">
+            <label for="to-time">Til klokken:</label>
+            <input class="form-control" type="time" step="300" value="16:00" id="to-time">
+          </div>
+          <div class="form-group">
+            <label for="hours">Timer:</label>
+            <input class="form-control" type="number" step="0.25" name="hours" id="hours" value="7.5">
+          </div>
+          <div class="form-group">
+            <label for="oid">Oid:</label>
+            <input class="form-control" type="number" id="oid" value="-1">
+          </div>
+          <button type="button" class="btn btn-default" id="newhourlist">Ny</button>
+          <button type="button" class="btn btn-default" id="updhourlist">Oppdater</button>
+          <button type="button" class="btn btn-default" id="fetchgroupsums">Gruppesummer</button>
+          <button type="button" class="btn btn-default" id="overview">Overview</button>
+          <button type="button" class="btn btn-default" id="fetchhourlistgroups">Timelistegrupper</button>
+          <div class="checkbox">
+            <label><input type="checkbox" id="showinactivegroups">Vis inaktive grupper</label>
+          </div>
+        </form>
+        <form role="form">
+          <div class="form-group">
+            <label for="hourlistgroup">Spesifikasjon:</label>
+            <input class="form-control" id="hourlistgroup">
+          </div>
+          <button type="button" class="btn btn-default" id="newhourlistgroup">Oppdater</button>
+        </form>
+      </div>
+      <div class="col-sm-6">
+        <p id="message">A message could go here.</p>
+      </div>
+    </div>
+  </div>
+  {% include "templates/footer.html" %}
+</body>
+
+</html>

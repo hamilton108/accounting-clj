@@ -1,29 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8">
-    <title>Harbor View</title>
+  <title>General Journal</title>
+  <meta charset="UTF-8"> {% include "templates/head.html" %}
+  </meta>
 </head>
+
 <body>
-    <div class="container">
-        <div class="row">
-            <div class="col-sm-6">
-                <a href="#dlg1" id="jax" class="href-hidden">Open Modal</a>
-            </div>
-        </div>
-    </div>
-
-
-    <div class="scripts"></div>
-
-    <!-- Dialog box -->
-    <div id="dlg1" class="modalDialog">
-        <div>
-            <a href="#close" title="Close" class="close">X</a>
-            <button id="dlgOkBtn" type="button">Ok</button>
-            <button id="dlgCloseBtn" type="button">Cancel</button>
-        </div>
-    </div>
-    <link rel="shortcut icon" href="img/favicon.ico">
+  {% include "templates/footer.html" %}
 </body>
 </html>

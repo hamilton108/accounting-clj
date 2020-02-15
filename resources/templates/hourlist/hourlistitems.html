@@ -1,0 +1,30 @@
+<table class="table hourlistitems">
+    <caption>Overview</caption>
+    <thead>
+    <tr>
+        <th>Oid</th>
+        <th>Beskrivelse</th>
+        <th>F.nr</th>
+        <th>Dato</th>
+        <th>Timer</th>
+        <th>Fra</th>
+        <th>Til</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for ix in items %}
+        <tr class="rows">
+            <td><a href="#" class="loadhourlistdata href-td" data-oid="{{ix.oid}}" data-hours="{{ix.hours}}" data-date="{{ix.date}}"
+                   data-group ="{{ix.group}}"
+                   data-fromtime="{{ix.fromtime}}"
+                   data-totime="{{ix.totime}}">{{ix.oid}}</a></td>
+            <td>{{ix.desc}}</td>
+            <td>{{ix.fnr}}</td>
+            <td>{{ix.date}}</td>
+            <td>{{ix.hours}}</td>
+            <td>{{ix.fromtime}}</td>
+            <td>{{ix.totime}}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
