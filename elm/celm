@@ -1,0 +1,69 @@
+#!/bin/bash
+
+
+usage()
+{
+cat << EOF
+usage: $0 options
+
+OPTIONS:
+   -h      Show this message
+   -o      --optimize flag
+EOF
+}
+
+MODULE="1"
+OPTIMIZE="0"
+TMP="/home/rcs/opt/elmcommon"
+
+while getopts “hoi:” OPTION
+do
+     case $OPTION in
+         h)
+             usage
+             exit 1
+             ;;
+         o)
+             OTPIMIZE="1"
+             ;;
+         ?)
+             usage
+             exit
+             ;;
+     esac
+done
+
+DOCKER_IMG="rcs/elm:0.19.1"
+
+case $MODULE in
+
+    1) ELM="src/GeneralJournal/Main.elm"
+       JS="elm-gj.js"
+       TODIR="maunaloa"
+        ;;
+esac
+
+if [ "$OPTIMIZE" = "1" ]; then
+    docker run --user $(id -u):$(id -g) -it --rm -v "$(pwd):/code" -v "$TMP:/tmp" -w "/code" -e "HOME=/tmp" $DOCKER_IMG make $ELM --output $JS --optimize
+else
+    docker run --user $(id -u):$(id -g) -it --rm -v "$(pwd):/code" -v "$TMP:/tmp" -w "/code" -e "HOME=/tmp" $DOCKER_IMG make $ELM --output $JS
+fi
+
+cp $JS ../resources/public/js/$JS
+
+exit 0
+
+# #!/bin/sh
+#
+# set -e
+#
+# js="elm.js"
+# min="elm.min.js"
+#
+# elm make --optimize --output=$js $@
+#
+# uglifyjs $js --compress 'pure_funcs="F2,F3,F4,F5,F6,F7,F8,F9,A2,A3,A4,A5,A6,A7,A8,A9",pure_getters,keep_fargs=false,unsafe_comps,unsafe' | uglifyjs --mangle --output=$min
+#
+# echo "Initial size: $(cat $js | wc -c) bytes  ($js)"
+# echo "Minified size:$(cat $min | wc -c) bytes  ($min)"
+# echo "Gzipped size: $(cat $min | gzip -c | wc -c) bytes"
