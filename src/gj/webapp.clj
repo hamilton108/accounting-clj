@@ -14,7 +14,6 @@
     [ring.middleware.params :only (wrap-params)]))
 
 (defn init []
-  (prn (DBX/fetch-by-bilag))
   (P/render-file "templates/index.html" {}))
 
 (defn wrap-return-favicon [handler]

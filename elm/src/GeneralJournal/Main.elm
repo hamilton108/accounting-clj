@@ -34,5 +34,5 @@ main =
 
 
 init : Flags -> Url -> Nav.Key -> ( Model, Cmd Msg )
-init version url key =
+init flags url key =
     ( {}, Cmd.none )

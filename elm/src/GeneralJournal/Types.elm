@@ -8,6 +8,12 @@ type alias Flags =
     Int
 
 
+type Page
+    = GalleryPage Gallery.Model
+    | FoldersPage Folders.Model
+    | NotFound
+
+
 type Msg
     = ClickedLink Browser.UrlRequest
     | ChangedUrl Url
