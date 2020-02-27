@@ -1,6 +1,6 @@
 (ns gj.generaljournal.html
   (:import
-    [generaljournal.dto
+    [accountingrepos.dto
       GeneralJournalBean
       Ns4102Bean])
   (:use

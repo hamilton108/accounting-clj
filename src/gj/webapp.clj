@@ -13,6 +13,9 @@
     [ring.adapter.jetty :only (run-jetty)]
     [ring.middleware.params :only (wrap-params)]))
 
+;(P/set-resource-path! "/home/rcs/opt/java/harborview/src/resources/")
+(P/cache-off!)
+
 (defn init []
   (P/render-file "templates/index.html" {}))
 
@@ -38,4 +41,4 @@
     ;U/allow-cross-origin))
 
 (defn -main [& args]
-  (def server (run-jetty #'webapp {:port 8082 :join? false})))
+  (def server (run-jetty #'webapp {:port 6346 :join? false})))

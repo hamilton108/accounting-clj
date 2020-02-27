@@ -1,1 +1,0 @@
-module GeneralJournal.Commands exposing (..)

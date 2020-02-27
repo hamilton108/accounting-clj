@@ -5,7 +5,10 @@ import Json.Decode.Pipeline as JP
 
 
 type alias JsonStatus =
-    { ok : Bool, msg : String, statusCode : Int }
+    { ok : Bool
+    , msg : String
+    , statusCode : Int
+    }
 
 
 jsonStatusDecoder : JD.Decoder JsonStatus

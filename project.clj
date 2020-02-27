@@ -13,7 +13,7 @@
                  [cheshire "5.10.0"]]
 
   :resource-paths [
-		"/home/rcs/opt/java/generaljournal-repos/build/libs/generaljournal-1.0.jar"
+		"/home/rcs/opt/java/accounting-repos/build/libs/accounting-repos-1.0.jar"
         "resources"]
   :main ^:skip-aot gj.webapp 
   :target-path "target/%s"

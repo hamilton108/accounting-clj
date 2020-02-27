@@ -37,8 +37,8 @@ DOCKER_IMG="rcs/elm:0.19.1"
 
 case $MODULE in
 
-    1) ELM="src/GeneralJournal/Main.elm"
-       JS="elm-gj.js"
+    1) ELM="src/Accounting/Main.elm"
+       JS="elm-accounting.js"
        TODIR="maunaloa"
         ;;
 esac

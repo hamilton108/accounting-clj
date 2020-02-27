@@ -1,15 +1,17 @@
-module GeneralJournal.Main exposing (main)
+module Accounting.Main exposing (main)
 
-import Browser
-import Browser.Navigation as Nav
-import GeneralJournal.Types
+import Accounting.Types
     exposing
         ( Flags
         , Model
         , Msg(..)
+        , Page(..)
+        , Route(..)
         )
-import GeneralJournal.Update exposing (update)
-import GeneralJournal.View exposing (view)
+import Accounting.Update exposing (update, updateUrl)
+import Accounting.View exposing (view)
+import Browser
+import Browser.Navigation as Nav
 import Url exposing (Url)
 
 
@@ -35,4 +37,4 @@ main =
 
 init : Flags -> Url -> Nav.Key -> ( Model, Cmd Msg )
 init flags url key =
-    ( {}, Cmd.none )
+    updateUrl url { page = NotFound, key = key }

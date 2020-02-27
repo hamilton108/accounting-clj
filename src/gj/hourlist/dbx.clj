@@ -1,9 +1,9 @@
 (ns gj.hourlist.dbx
   (:import
-    [generaljournal.dto
+    [accountingrepos.dto
       HourlistBean
       HourlistGroupBean]
-    [generaljournal.mybatis
+    [accountingrepos.mybatis
       HourlistFacade
       InvoiceMapper
       HourlistMapper

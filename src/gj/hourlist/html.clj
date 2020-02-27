@@ -1,6 +1,6 @@
 (ns gj.hourlist.html
   (:import
-    [generaljournal.dto HourlistBean HourlistGroupBean])
+    [accountingrepos.dto HourlistBean HourlistGroupBean])
   (:use
     [compojure.core :only (GET PUT defroutes)])
   (:require

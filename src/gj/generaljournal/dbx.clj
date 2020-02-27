@@ -1,7 +1,7 @@
 (ns gj.generaljournal.dbx
   (:import
-    [generaljournal.dto GeneralJournalBean]
-    [generaljournal.mybatis GjFacade])
+    [accountingrepos.dto GeneralJournalBean]
+    [accountingrepos.mybatis GjFacade])
   (:require
     [gj.service.htmlutils :as U]
     [gj.service.db :as DB]

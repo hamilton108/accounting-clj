@@ -12,3 +12,5 @@ pom.xml.asc
 .hg/
 *.swp
 elm-stuff/
+node_modules/
+*.orig
