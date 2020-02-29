@@ -1,9 +1,9 @@
 module Accounting.GeneralJournal exposing (Model, Msg(..), init, update, view)
 
+import Accounting.Ui exposing (GridPosition(..), gridItem, textInput)
 import Html as H
 import Html.Attributes as A
 import Html.Events as E
-import Url exposing (Url)
 
 
 type alias Model =
@@ -21,9 +21,12 @@ init =
 
 view : Model -> H.Html Msg
 view model =
-    H.div [ A.class "content" ]
-        [ H.div [ A.class "folders" ]
-            [ H.text "GeneralJournal" ]
+    let
+        tx =
+            textInput
+    in
+    H.div [ A.class "generaljournal-grid" ]
+        [ gridItem (GridPosition "a1") tx
         ]
 
 

@@ -1,0 +1,11 @@
+
+
+.generaljournal-grid {
+  display: grid;
+  grid-gap: 20px;
+  grid-template-columns: 1fr 1320px 4fr 1fr;
+  grid-template-rows: 500px 110px 200px; }
+
+.a1 {
+  grid-row: 1;
+  grid-column: 2; }
