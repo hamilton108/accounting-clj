@@ -4287,6 +4287,188 @@ function _Browser_load(url)
 }
 
 
+
+// SEND REQUEST
+
+var _Http_toTask = F2(function(request, maybeProgress)
+{
+	return _Scheduler_binding(function(callback)
+	{
+		var xhr = new XMLHttpRequest();
+
+		_Http_configureProgress(xhr, maybeProgress);
+
+		xhr.addEventListener('error', function() {
+			callback(_Scheduler_fail($elm$http$Http$NetworkError));
+		});
+		xhr.addEventListener('timeout', function() {
+			callback(_Scheduler_fail($elm$http$Http$Timeout));
+		});
+		xhr.addEventListener('load', function() {
+			callback(_Http_handleResponse(xhr, request.expect.a));
+		});
+
+		try
+		{
+			xhr.open(request.method, request.url, true);
+		}
+		catch (e)
+		{
+			return callback(_Scheduler_fail($elm$http$Http$BadUrl(request.url)));
+		}
+
+		_Http_configureRequest(xhr, request);
+
+		var body = request.body;
+		xhr.send($elm$http$Http$Internal$isStringBody(body)
+			? (xhr.setRequestHeader('Content-Type', body.a), body.b)
+			: body.a
+		);
+
+		return function() { xhr.abort(); };
+	});
+});
+
+function _Http_configureProgress(xhr, maybeProgress)
+{
+	if (!$elm$core$Maybe$isJust(maybeProgress))
+	{
+		return;
+	}
+
+	xhr.addEventListener('progress', function(event) {
+		if (!event.lengthComputable)
+		{
+			return;
+		}
+		_Scheduler_rawSpawn(maybeProgress.a({
+			bytes: event.loaded,
+			bytesExpected: event.total
+		}));
+	});
+}
+
+function _Http_configureRequest(xhr, request)
+{
+	for (var headers = request.headers; headers.b; headers = headers.b) // WHILE_CONS
+	{
+		xhr.setRequestHeader(headers.a.a, headers.a.b);
+	}
+
+	xhr.responseType = request.expect.b;
+	xhr.withCredentials = request.withCredentials;
+
+	$elm$core$Maybe$isJust(request.timeout) && (xhr.timeout = request.timeout.a);
+}
+
+
+// RESPONSES
+
+function _Http_handleResponse(xhr, responseToResult)
+{
+	var response = _Http_toResponse(xhr);
+
+	if (xhr.status < 200 || 300 <= xhr.status)
+	{
+		response.body = xhr.responseText;
+		return _Scheduler_fail($elm$http$Http$BadStatus(response));
+	}
+
+	var result = responseToResult(response);
+
+	if ($elm$core$Result$isOk(result))
+	{
+		return _Scheduler_succeed(result.a);
+	}
+	else
+	{
+		response.body = xhr.responseText;
+		return _Scheduler_fail(A2($elm$http$Http$BadPayload, result.a, response));
+	}
+}
+
+function _Http_toResponse(xhr)
+{
+	return {
+		url: xhr.responseURL,
+		status: { code: xhr.status, message: xhr.statusText },
+		headers: _Http_parseHeaders(xhr.getAllResponseHeaders()),
+		body: xhr.response
+	};
+}
+
+function _Http_parseHeaders(rawHeaders)
+{
+	var headers = $elm$core$Dict$empty;
+
+	if (!rawHeaders)
+	{
+		return headers;
+	}
+
+	var headerPairs = rawHeaders.split('\u000d\u000a');
+	for (var i = headerPairs.length; i--; )
+	{
+		var headerPair = headerPairs[i];
+		var index = headerPair.indexOf('\u003a\u0020');
+		if (index > 0)
+		{
+			var key = headerPair.substring(0, index);
+			var value = headerPair.substring(index + 2);
+
+			headers = A3($elm$core$Dict$update, key, function(oldValue) {
+				return $elm$core$Maybe$Just($elm$core$Maybe$isJust(oldValue)
+					? value + ', ' + oldValue.a
+					: value
+				);
+			}, headers);
+		}
+	}
+
+	return headers;
+}
+
+
+// EXPECTORS
+
+function _Http_expectStringResponse(responseToResult)
+{
+	return {
+		$: 0,
+		b: 'text',
+		a: responseToResult
+	};
+}
+
+var _Http_mapExpect = F2(function(func, expect)
+{
+	return {
+		$: 0,
+		b: expect.b,
+		a: function(response) {
+			var convertedResponse = expect.a(response);
+			return A2($elm$core$Result$map, func, convertedResponse);
+		}
+	};
+});
+
+
+// BODY
+
+function _Http_multipart(parts)
+{
+
+
+	for (var formData = new FormData(); parts.b; parts = parts.b) // WHILE_CONS
+	{
+		var part = parts.a;
+		formData.append(part.a, part.b);
+	}
+
+	return $elm$http$Http$Internal$FormDataBody(formData);
+}
+
+
 function _Url_percentEncode(string)
 {
 	return encodeURIComponent(string);
@@ -5098,80 +5280,54 @@ var $elm$core$Task$perform = F2(
 	});
 var $elm$browser$Browser$application = _Browser_application;
 var $author$project$Accounting$Types$NotFound = {$: 'NotFound'};
-var $elm$core$Platform$Cmd$batch = _Platform_batch;
-var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
-var $author$project$Accounting$GeneralJournal$init = _Utils_Tuple2(
-	{},
-	$elm$core$Platform$Cmd$none);
-var $author$project$Accounting$HourList$init = _Utils_Tuple2(
-	{},
-	$elm$core$Platform$Cmd$none);
-var $elm$url$Url$Parser$State = F5(
-	function (visited, unvisited, params, frag, value) {
-		return {frag: frag, params: params, unvisited: unvisited, value: value, visited: visited};
+var $author$project$Accounting$GeneralJournal$InitDataFetched = function (a) {
+	return {$: 'InitDataFetched', a: a};
+};
+var $elm$http$Http$Internal$EmptyBody = {$: 'EmptyBody'};
+var $elm$http$Http$emptyBody = $elm$http$Http$Internal$EmptyBody;
+var $elm$json$Json$Decode$decodeString = _Json_runOnString;
+var $elm$http$Http$BadPayload = F2(
+	function (a, b) {
+		return {$: 'BadPayload', a: a, b: b};
 	});
-var $elm$url$Url$Parser$getFirstMatch = function (states) {
-	getFirstMatch:
-	while (true) {
-		if (!states.b) {
-			return $elm$core$Maybe$Nothing;
-		} else {
-			var state = states.a;
-			var rest = states.b;
-			var _v1 = state.unvisited;
-			if (!_v1.b) {
-				return $elm$core$Maybe$Just(state.value);
-			} else {
-				if ((_v1.a === '') && (!_v1.b.b)) {
-					return $elm$core$Maybe$Just(state.value);
-				} else {
-					var $temp$states = rest;
-					states = $temp$states;
-					continue getFirstMatch;
-				}
-			}
-		}
-	}
+var $elm$http$Http$BadStatus = function (a) {
+	return {$: 'BadStatus', a: a};
 };
-var $elm$url$Url$Parser$removeFinalEmpty = function (segments) {
-	if (!segments.b) {
-		return _List_Nil;
+var $elm$http$Http$BadUrl = function (a) {
+	return {$: 'BadUrl', a: a};
+};
+var $elm$http$Http$Internal$FormDataBody = function (a) {
+	return {$: 'FormDataBody', a: a};
+};
+var $elm$http$Http$NetworkError = {$: 'NetworkError'};
+var $elm$http$Http$Timeout = {$: 'Timeout'};
+var $elm$core$Dict$RBEmpty_elm_builtin = {$: 'RBEmpty_elm_builtin'};
+var $elm$core$Dict$empty = $elm$core$Dict$RBEmpty_elm_builtin;
+var $elm$core$Maybe$isJust = function (maybe) {
+	if (maybe.$ === 'Just') {
+		return true;
 	} else {
-		if ((segments.a === '') && (!segments.b.b)) {
-			return _List_Nil;
-		} else {
-			var segment = segments.a;
-			var rest = segments.b;
-			return A2(
-				$elm$core$List$cons,
-				segment,
-				$elm$url$Url$Parser$removeFinalEmpty(rest));
-		}
+		return false;
 	}
 };
-var $elm$url$Url$Parser$preparePath = function (path) {
-	var _v0 = A2($elm$core$String$split, '/', path);
-	if (_v0.b && (_v0.a === '')) {
-		var segments = _v0.b;
-		return $elm$url$Url$Parser$removeFinalEmpty(segments);
+var $elm$http$Http$Internal$isStringBody = function (body) {
+	if (body.$ === 'StringBody') {
+		return true;
 	} else {
-		var segments = _v0;
-		return $elm$url$Url$Parser$removeFinalEmpty(segments);
+		return false;
 	}
 };
-var $elm$url$Url$Parser$addToParametersHelp = F2(
-	function (value, maybeList) {
-		if (maybeList.$ === 'Nothing') {
-			return $elm$core$Maybe$Just(
-				_List_fromArray(
-					[value]));
+var $elm$core$Result$map = F2(
+	function (func, ra) {
+		if (ra.$ === 'Ok') {
+			var a = ra.a;
+			return $elm$core$Result$Ok(
+				func(a));
 		} else {
-			var list = maybeList.a;
-			return $elm$core$Maybe$Just(
-				A2($elm$core$List$cons, value, list));
+			var e = ra.a;
+			return $elm$core$Result$Err(e);
 		}
 	});
-var $elm$url$Url$percentDecode = _Url_percentDecode;
 var $elm$core$Basics$compare = _Utils_compare;
 var $elm$core$Dict$get = F2(
 	function (targetKey, dict) {
@@ -5209,7 +5365,6 @@ var $elm$core$Dict$RBNode_elm_builtin = F5(
 	function (a, b, c, d, e) {
 		return {$: 'RBNode_elm_builtin', a: a, b: b, c: c, d: d, e: e};
 	});
-var $elm$core$Dict$RBEmpty_elm_builtin = {$: 'RBEmpty_elm_builtin'};
 var $elm$core$Dict$Red = {$: 'Red'};
 var $elm$core$Dict$balance = F5(
 	function (color, key, value, left, right) {
@@ -5686,6 +5841,191 @@ var $elm$core$Dict$update = F3(
 			return A2($elm$core$Dict$remove, targetKey, dictionary);
 		}
 	});
+var $elm$http$Http$expectStringResponse = _Http_expectStringResponse;
+var $elm$http$Http$expectJson = function (decoder) {
+	return $elm$http$Http$expectStringResponse(
+		function (response) {
+			var _v0 = A2($elm$json$Json$Decode$decodeString, decoder, response.body);
+			if (_v0.$ === 'Err') {
+				var decodeError = _v0.a;
+				return $elm$core$Result$Err(
+					$elm$json$Json$Decode$errorToString(decodeError));
+			} else {
+				var value = _v0.a;
+				return $elm$core$Result$Ok(value);
+			}
+		});
+};
+var $elm$http$Http$Internal$Request = function (a) {
+	return {$: 'Request', a: a};
+};
+var $elm$http$Http$request = $elm$http$Http$Internal$Request;
+var $elm$http$Http$get = F2(
+	function (url, decoder) {
+		return $elm$http$Http$request(
+			{
+				body: $elm$http$Http$emptyBody,
+				expect: $elm$http$Http$expectJson(decoder),
+				headers: _List_Nil,
+				method: 'GET',
+				timeout: $elm$core$Maybe$Nothing,
+				url: url,
+				withCredentials: false
+			});
+	});
+var $author$project$Accounting$GeneralJournal$Model = F2(
+	function (ns4102, selectedNs4102) {
+		return {ns4102: ns4102, selectedNs4102: selectedNs4102};
+	});
+var $elm$core$Basics$composeR = F3(
+	function (f, g, x) {
+		return g(
+			f(x));
+	});
+var $NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$custom = $elm$json$Json$Decode$map2($elm$core$Basics$apR);
+var $NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$hardcoded = A2($elm$core$Basics$composeR, $elm$json$Json$Decode$succeed, $NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$custom);
+var $elm$json$Json$Decode$list = _Json_decodeList;
+var $elm$json$Json$Decode$field = _Json_decodeField;
+var $NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required = F3(
+	function (key, valDecoder, decoder) {
+		return A2(
+			$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$custom,
+			A2($elm$json$Json$Decode$field, key, valDecoder),
+			decoder);
+	});
+var $author$project$Accounting$Ui$SelectItem = F2(
+	function (val, txt) {
+		return {txt: txt, val: val};
+	});
+var $elm$json$Json$Decode$string = _Json_decodeString;
+var $author$project$Accounting$GeneralJournal$selectItemDecoder = A3(
+	$elm$json$Json$Decode$map2,
+	$author$project$Accounting$Ui$SelectItem,
+	A2($elm$json$Json$Decode$field, 'v', $elm$json$Json$Decode$string),
+	A2($elm$json$Json$Decode$field, 't', $elm$json$Json$Decode$string));
+var $author$project$Accounting$GeneralJournal$initDataDecoder = A2(
+	$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$hardcoded,
+	$elm$core$Maybe$Nothing,
+	A3(
+		$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
+		'ns4102',
+		$elm$json$Json$Decode$list($author$project$Accounting$GeneralJournal$selectItemDecoder),
+		$elm$json$Json$Decode$succeed($author$project$Accounting$GeneralJournal$Model)));
+var $author$project$Accounting$GeneralJournal$mainUrl = '/generaljournal';
+var $author$project$Accounting$GeneralJournal$initUrl = $author$project$Accounting$GeneralJournal$mainUrl + '/latestdata';
+var $elm$core$Basics$composeL = F3(
+	function (g, f, x) {
+		return g(
+			f(x));
+	});
+var $elm$core$Task$onError = _Scheduler_onError;
+var $elm$core$Task$attempt = F2(
+	function (resultToMessage, task) {
+		return $elm$core$Task$command(
+			$elm$core$Task$Perform(
+				A2(
+					$elm$core$Task$onError,
+					A2(
+						$elm$core$Basics$composeL,
+						A2($elm$core$Basics$composeL, $elm$core$Task$succeed, resultToMessage),
+						$elm$core$Result$Err),
+					A2(
+						$elm$core$Task$andThen,
+						A2(
+							$elm$core$Basics$composeL,
+							A2($elm$core$Basics$composeL, $elm$core$Task$succeed, resultToMessage),
+							$elm$core$Result$Ok),
+						task))));
+	});
+var $elm$http$Http$toTask = function (_v0) {
+	var request_ = _v0.a;
+	return A2(_Http_toTask, request_, $elm$core$Maybe$Nothing);
+};
+var $elm$http$Http$send = F2(
+	function (resultToMessage, request_) {
+		return A2(
+			$elm$core$Task$attempt,
+			resultToMessage,
+			$elm$http$Http$toTask(request_));
+	});
+var $author$project$Accounting$GeneralJournal$fetchInitData = A2(
+	$elm$http$Http$send,
+	$author$project$Accounting$GeneralJournal$InitDataFetched,
+	A2($elm$http$Http$get, $author$project$Accounting$GeneralJournal$initUrl, $author$project$Accounting$GeneralJournal$initDataDecoder));
+var $author$project$Accounting$GeneralJournal$init = _Utils_Tuple2(
+	{ns4102: _List_Nil, selectedNs4102: $elm$core$Maybe$Nothing},
+	$author$project$Accounting$GeneralJournal$fetchInitData);
+var $elm$core$Platform$Cmd$batch = _Platform_batch;
+var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
+var $author$project$Accounting$HourList$init = _Utils_Tuple2(
+	{},
+	$elm$core$Platform$Cmd$none);
+var $elm$url$Url$Parser$State = F5(
+	function (visited, unvisited, params, frag, value) {
+		return {frag: frag, params: params, unvisited: unvisited, value: value, visited: visited};
+	});
+var $elm$url$Url$Parser$getFirstMatch = function (states) {
+	getFirstMatch:
+	while (true) {
+		if (!states.b) {
+			return $elm$core$Maybe$Nothing;
+		} else {
+			var state = states.a;
+			var rest = states.b;
+			var _v1 = state.unvisited;
+			if (!_v1.b) {
+				return $elm$core$Maybe$Just(state.value);
+			} else {
+				if ((_v1.a === '') && (!_v1.b.b)) {
+					return $elm$core$Maybe$Just(state.value);
+				} else {
+					var $temp$states = rest;
+					states = $temp$states;
+					continue getFirstMatch;
+				}
+			}
+		}
+	}
+};
+var $elm$url$Url$Parser$removeFinalEmpty = function (segments) {
+	if (!segments.b) {
+		return _List_Nil;
+	} else {
+		if ((segments.a === '') && (!segments.b.b)) {
+			return _List_Nil;
+		} else {
+			var segment = segments.a;
+			var rest = segments.b;
+			return A2(
+				$elm$core$List$cons,
+				segment,
+				$elm$url$Url$Parser$removeFinalEmpty(rest));
+		}
+	}
+};
+var $elm$url$Url$Parser$preparePath = function (path) {
+	var _v0 = A2($elm$core$String$split, '/', path);
+	if (_v0.b && (_v0.a === '')) {
+		var segments = _v0.b;
+		return $elm$url$Url$Parser$removeFinalEmpty(segments);
+	} else {
+		var segments = _v0;
+		return $elm$url$Url$Parser$removeFinalEmpty(segments);
+	}
+};
+var $elm$url$Url$Parser$addToParametersHelp = F2(
+	function (value, maybeList) {
+		if (maybeList.$ === 'Nothing') {
+			return $elm$core$Maybe$Just(
+				_List_fromArray(
+					[value]));
+		} else {
+			var list = maybeList.a;
+			return $elm$core$Maybe$Just(
+				A2($elm$core$List$cons, value, list));
+		}
+	});
+var $elm$url$Url$percentDecode = _Url_percentDecode;
 var $elm$url$Url$Parser$addParam = F2(
 	function (segment, dict) {
 		var _v0 = A2($elm$core$String$split, '=', segment);
@@ -5714,7 +6054,6 @@ var $elm$url$Url$Parser$addParam = F2(
 			return dict;
 		}
 	});
-var $elm$core$Dict$empty = $elm$core$Dict$RBEmpty_elm_builtin;
 var $elm$url$Url$Parser$prepareQuery = function (maybeQuery) {
 	if (maybeQuery.$ === 'Nothing') {
 		return $elm$core$Dict$empty;
@@ -5831,7 +6170,7 @@ var $elm$url$Url$Parser$s = function (str) {
 			}
 		});
 };
-var $author$project$Accounting$Update$parser = $elm$url$Url$Parser$oneOf(
+var $author$project$Accounting$Main$parser = $elm$url$Url$Parser$oneOf(
 	_List_fromArray(
 		[
 			A2(
@@ -5850,7 +6189,7 @@ var $author$project$Accounting$Types$GeneralJournalPage = function (a) {
 	return {$: 'GeneralJournalPage', a: a};
 };
 var $elm$core$Platform$Cmd$map = _Platform_map;
-var $author$project$Accounting$Update$toGeneralJournal = F2(
+var $author$project$Accounting$Main$toGeneralJournal = F2(
 	function (model, _v0) {
 		var gj = _v0.a;
 		var cmd = _v0.b;
@@ -5868,7 +6207,7 @@ var $author$project$Accounting$Types$HourListMsg = function (a) {
 var $author$project$Accounting$Types$HourListPage = function (a) {
 	return {$: 'HourListPage', a: a};
 };
-var $author$project$Accounting$Update$toHourList = F2(
+var $author$project$Accounting$Main$toHourList = F2(
 	function (model, _v0) {
 		var gj = _v0.a;
 		var cmd = _v0.b;
@@ -5880,16 +6219,16 @@ var $author$project$Accounting$Update$toHourList = F2(
 				}),
 			A2($elm$core$Platform$Cmd$map, $author$project$Accounting$Types$HourListMsg, cmd));
 	});
-var $author$project$Accounting$Update$updateUrl = F2(
+var $author$project$Accounting$Main$updateUrl = F2(
 	function (url, model) {
-		var _v0 = A2($elm$url$Url$Parser$parse, $author$project$Accounting$Update$parser, url);
+		var _v0 = A2($elm$url$Url$Parser$parse, $author$project$Accounting$Main$parser, url);
 		if (_v0.$ === 'Just') {
 			if (_v0.a.$ === 'GeneralJournalRoute') {
 				var _v1 = _v0.a;
-				return A2($author$project$Accounting$Update$toGeneralJournal, model, $author$project$Accounting$GeneralJournal$init);
+				return A2($author$project$Accounting$Main$toGeneralJournal, model, $author$project$Accounting$GeneralJournal$init);
 			} else {
 				var _v2 = _v0.a;
-				return A2($author$project$Accounting$Update$toHourList, model, $author$project$Accounting$HourList$init);
+				return A2($author$project$Accounting$Main$toHourList, model, $author$project$Accounting$HourList$init);
 			}
 		} else {
 			return _Utils_Tuple2(
@@ -5902,7 +6241,7 @@ var $author$project$Accounting$Update$updateUrl = F2(
 var $author$project$Accounting$Main$init = F3(
 	function (flags, url, key) {
 		return A2(
-			$author$project$Accounting$Update$updateUrl,
+			$author$project$Accounting$Main$updateUrl,
 			url,
 			{key: key, page: $author$project$Accounting$Types$NotFound});
 	});
@@ -5955,15 +6294,68 @@ var $elm$url$Url$toString = function (url) {
 					_Utils_ap(http, url.host)),
 				url.path)));
 };
+var $elm$core$Debug$log = _Debug_log;
 var $author$project$Accounting$GeneralJournal$update = F2(
 	function (msg, model) {
-		return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+		switch (msg.$) {
+			case 'Noop':
+				return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+			case 'DebitChanged':
+				var s = msg.a;
+				var curNs4102 = (s === '') ? $elm$core$Maybe$Nothing : $elm$core$Maybe$Just(s);
+				return A2(
+					$elm$core$Debug$log,
+					'DebitChanged',
+					_Utils_Tuple2(
+						_Utils_update(
+							model,
+							{selectedNs4102: curNs4102}),
+						$elm$core$Platform$Cmd$none));
+			case 'DateChanged':
+				var s = msg.a;
+				return A2(
+					$elm$core$Debug$log,
+					'Edit Changed',
+					_Utils_Tuple2(model, $elm$core$Platform$Cmd$none));
+			case 'DescChanged':
+				var s = msg.a;
+				return A2(
+					$elm$core$Debug$log,
+					'Edit Changed',
+					_Utils_Tuple2(model, $elm$core$Platform$Cmd$none));
+			case 'BilagChanged':
+				var s = msg.a;
+				return A2(
+					$elm$core$Debug$log,
+					'Edit Changed',
+					_Utils_Tuple2(model, $elm$core$Platform$Cmd$none));
+			case 'BelopChanged':
+				var s = msg.a;
+				return A2(
+					$elm$core$Debug$log,
+					'Edit Changed',
+					_Utils_Tuple2(model, $elm$core$Platform$Cmd$none));
+			case 'MvaChanged':
+				var s = msg.a;
+				return A2(
+					$elm$core$Debug$log,
+					'Edit Changed',
+					_Utils_Tuple2(model, $elm$core$Platform$Cmd$none));
+			default:
+				if (msg.a.$ === 'Ok') {
+					var initData = msg.a.a;
+					return _Utils_Tuple2(initData, $elm$core$Platform$Cmd$none);
+				} else {
+					var err = msg.a.a;
+					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+				}
+		}
 	});
 var $author$project$Accounting$HourList$update = F2(
 	function (msg, model) {
 		return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 	});
-var $author$project$Accounting$Update$update = F2(
+var $author$project$Accounting$Main$update = F2(
 	function (msg, model) {
 		switch (msg.$) {
 			case 'ClickedLink':
@@ -5984,14 +6376,14 @@ var $author$project$Accounting$Update$update = F2(
 				}
 			case 'ChangedUrl':
 				var url = msg.a;
-				return A2($author$project$Accounting$Update$updateUrl, url, model);
+				return A2($author$project$Accounting$Main$updateUrl, url, model);
 			case 'GeneralJournalMsg':
 				var m = msg.a;
 				var _v2 = model.page;
 				if (_v2.$ === 'GeneralJournalPage') {
 					var gjModel = _v2.a;
 					return A2(
-						$author$project$Accounting$Update$toGeneralJournal,
+						$author$project$Accounting$Main$toGeneralJournal,
 						model,
 						A2($author$project$Accounting$GeneralJournal$update, m, gjModel));
 				} else {
@@ -6003,7 +6395,7 @@ var $author$project$Accounting$Update$update = F2(
 				if (_v3.$ === 'HourListPage') {
 					var hlModel = _v3.a;
 					return A2(
-						$author$project$Accounting$Update$toHourList,
+						$author$project$Accounting$Main$toHourList,
 						model,
 						A2($author$project$Accounting$HourList$update, m, hlModel));
 				} else {
@@ -6015,6 +6407,30 @@ var $elm$virtual_dom$VirtualDom$map = _VirtualDom_map;
 var $elm$html$Html$map = $elm$virtual_dom$VirtualDom$map;
 var $elm$virtual_dom$VirtualDom$text = _VirtualDom_text;
 var $elm$html$Html$text = $elm$virtual_dom$VirtualDom$text;
+var $author$project$Accounting$GeneralJournal$BelopChanged = function (a) {
+	return {$: 'BelopChanged', a: a};
+};
+var $author$project$Accounting$GeneralJournal$BilagChanged = function (a) {
+	return {$: 'BilagChanged', a: a};
+};
+var $author$project$Accounting$GeneralJournal$DateChanged = function (a) {
+	return {$: 'DateChanged', a: a};
+};
+var $author$project$Accounting$GeneralJournal$DebitChanged = function (a) {
+	return {$: 'DebitChanged', a: a};
+};
+var $author$project$Accounting$GeneralJournal$DescChanged = function (a) {
+	return {$: 'DescChanged', a: a};
+};
+var $author$project$Accounting$Ui$GridPosition = function (a) {
+	return {$: 'GridPosition', a: a};
+};
+var $author$project$Accounting$Ui$LabelText = function (a) {
+	return {$: 'LabelText', a: a};
+};
+var $author$project$Accounting$GeneralJournal$MvaChanged = function (a) {
+	return {$: 'MvaChanged', a: a};
+};
 var $elm$json$Json$Encode$string = _Json_wrap;
 var $elm$html$Html$Attributes$stringProperty = F2(
 	function (key, string) {
@@ -6025,25 +6441,278 @@ var $elm$html$Html$Attributes$stringProperty = F2(
 	});
 var $elm$html$Html$Attributes$class = $elm$html$Html$Attributes$stringProperty('className');
 var $elm$html$Html$div = _VirtualDom_node('div');
+var $author$project$Accounting$Ui$gridItem = F2(
+	function (_v0, item) {
+		var clazz = _v0.a;
+		return A2(
+			$elm$html$Html$div,
+			_List_fromArray(
+				[
+					$elm$html$Html$Attributes$class(clazz)
+				]),
+			_List_fromArray(
+				[item]));
+	});
+var $elm$html$Html$option = _VirtualDom_node('option');
+var $elm$html$Html$Attributes$value = $elm$html$Html$Attributes$stringProperty('value');
+var $author$project$Accounting$Ui$emptySelectOption = A2(
+	$elm$html$Html$option,
+	_List_fromArray(
+		[
+			$elm$html$Html$Attributes$value('')
+		]),
+	_List_fromArray(
+		[
+			$elm$html$Html$text('-')
+		]));
+var $elm$html$Html$label = _VirtualDom_node('label');
+var $elm$json$Json$Encode$bool = _Json_wrap;
+var $elm$html$Html$Attributes$boolProperty = F2(
+	function (key, bool) {
+		return A2(
+			_VirtualDom_property,
+			key,
+			$elm$json$Json$Encode$bool(bool));
+	});
+var $elm$html$Html$Attributes$selected = $elm$html$Html$Attributes$boolProperty('selected');
+var $author$project$Accounting$Ui$makeSelectOption = F2(
+	function (selected, item) {
+		if (selected.$ === 'Nothing') {
+			return A2(
+				$elm$html$Html$option,
+				_List_fromArray(
+					[
+						$elm$html$Html$Attributes$value(item.val)
+					]),
+				_List_fromArray(
+					[
+						$elm$html$Html$text(item.txt)
+					]));
+		} else {
+			var sel = selected.a;
+			return A2(
+				$elm$html$Html$option,
+				_List_fromArray(
+					[
+						$elm$html$Html$Attributes$value(item.val),
+						$elm$html$Html$Attributes$selected(
+						_Utils_eq(sel, item.val))
+					]),
+				_List_fromArray(
+					[
+						$elm$html$Html$text(item.txt)
+					]));
+		}
+	});
+var $elm$virtual_dom$VirtualDom$Normal = function (a) {
+	return {$: 'Normal', a: a};
+};
+var $elm$virtual_dom$VirtualDom$on = _VirtualDom_on;
+var $elm$html$Html$Events$on = F2(
+	function (event, decoder) {
+		return A2(
+			$elm$virtual_dom$VirtualDom$on,
+			event,
+			$elm$virtual_dom$VirtualDom$Normal(decoder));
+	});
+var $elm$json$Json$Decode$at = F2(
+	function (fields, decoder) {
+		return A3($elm$core$List$foldr, $elm$json$Json$Decode$field, decoder, fields);
+	});
+var $elm$html$Html$Events$targetValue = A2(
+	$elm$json$Json$Decode$at,
+	_List_fromArray(
+		['target', 'value']),
+	$elm$json$Json$Decode$string);
+var $author$project$Accounting$Ui$onChange = function (tagger) {
+	return A2(
+		$elm$html$Html$Events$on,
+		'change',
+		A2($elm$json$Json$Decode$map, tagger, $elm$html$Html$Events$targetValue));
+};
+var $elm$html$Html$select = _VirtualDom_node('select');
+var $elm$html$Html$span = _VirtualDom_node('span');
+var $author$project$Accounting$Ui$makeSelect = F4(
+	function (event, caption, payload, selected) {
+		var makeSelectOption_ = $author$project$Accounting$Ui$makeSelectOption(selected);
+		var px = A2(
+			$elm$core$List$cons,
+			$author$project$Accounting$Ui$emptySelectOption,
+			A2($elm$core$List$map, makeSelectOption_, payload));
+		return A2(
+			$elm$html$Html$span,
+			_List_fromArray(
+				[
+					$elm$html$Html$Attributes$class('form-group')
+				]),
+			_List_fromArray(
+				[
+					A2(
+					$elm$html$Html$label,
+					_List_Nil,
+					_List_fromArray(
+						[
+							$elm$html$Html$text(caption)
+						])),
+					A2(
+					$elm$html$Html$select,
+					_List_fromArray(
+						[
+							$author$project$Accounting$Ui$onChange(event),
+							$elm$html$Html$Attributes$class('form-control')
+						]),
+					px)
+				]));
+	});
+var $author$project$Accounting$Ui$InputType = function (a) {
+	return {$: 'InputType', a: a};
+};
+var $elm$html$Html$input = _VirtualDom_node('input');
+var $elm$html$Html$Events$alwaysStop = function (x) {
+	return _Utils_Tuple2(x, true);
+};
+var $elm$virtual_dom$VirtualDom$MayStopPropagation = function (a) {
+	return {$: 'MayStopPropagation', a: a};
+};
+var $elm$html$Html$Events$stopPropagationOn = F2(
+	function (event, decoder) {
+		return A2(
+			$elm$virtual_dom$VirtualDom$on,
+			event,
+			$elm$virtual_dom$VirtualDom$MayStopPropagation(decoder));
+	});
+var $elm$html$Html$Events$onInput = function (tagger) {
+	return A2(
+		$elm$html$Html$Events$stopPropagationOn,
+		'input',
+		A2(
+			$elm$json$Json$Decode$map,
+			$elm$html$Html$Events$alwaysStop,
+			A2($elm$json$Json$Decode$map, tagger, $elm$html$Html$Events$targetValue)));
+};
+var $elm$html$Html$Attributes$type_ = $elm$html$Html$Attributes$stringProperty('type');
+var $author$project$Accounting$Ui$input = F4(
+	function (event, _v0, _v1, inputValue) {
+		var inputType = _v0.a;
+		var labelText = _v1.a;
+		var myLabel = A2(
+			$elm$html$Html$label,
+			_List_Nil,
+			_List_fromArray(
+				[
+					$elm$html$Html$text(labelText)
+				]));
+		var myInput = function () {
+			if (inputValue.$ === 'Nothing') {
+				return A2(
+					$elm$html$Html$input,
+					_List_fromArray(
+						[
+							$elm$html$Html$Attributes$type_(inputType),
+							$elm$html$Html$Attributes$class('form-control'),
+							$elm$html$Html$Events$onInput(event)
+						]),
+					_List_Nil);
+			} else {
+				var val = inputValue.a;
+				return A2(
+					$elm$html$Html$input,
+					_List_fromArray(
+						[
+							$elm$html$Html$Attributes$type_(inputType),
+							$elm$html$Html$Attributes$class('form-control'),
+							$elm$html$Html$Events$onInput(event),
+							$elm$html$Html$Attributes$value(val)
+						]),
+					_List_Nil);
+			}
+		}();
+		return A2(
+			$elm$html$Html$div,
+			_List_fromArray(
+				[
+					$elm$html$Html$Attributes$class('form-group')
+				]),
+			_List_fromArray(
+				[myLabel, myInput]));
+	});
+var $author$project$Accounting$Ui$numberInput = F3(
+	function (event, labelText, inputValue) {
+		return A4(
+			$author$project$Accounting$Ui$input,
+			event,
+			$author$project$Accounting$Ui$InputType('number'),
+			labelText,
+			inputValue);
+	});
+var $author$project$Accounting$Ui$textInput = F3(
+	function (event, labelText, inputValue) {
+		return A4(
+			$author$project$Accounting$Ui$input,
+			event,
+			$author$project$Accounting$Ui$InputType('text'),
+			labelText,
+			inputValue);
+	});
 var $author$project$Accounting$GeneralJournal$view = function (model) {
+	var mva_amount = A3(
+		$author$project$Accounting$Ui$numberInput,
+		$author$project$Accounting$GeneralJournal$MvaChanged,
+		$author$project$Accounting$Ui$LabelText('Mva beløp'),
+		$elm$core$Maybe$Just('0.0'));
+	var desc = A3(
+		$author$project$Accounting$Ui$textInput,
+		$author$project$Accounting$GeneralJournal$DescChanged,
+		$author$project$Accounting$Ui$LabelText('Tekst'),
+		$elm$core$Maybe$Nothing);
+	var debet = A4($author$project$Accounting$Ui$makeSelect, $author$project$Accounting$GeneralJournal$DebitChanged, 'Debet', model.ns4102, $elm$core$Maybe$Nothing);
+	var curdate = A3(
+		$author$project$Accounting$Ui$textInput,
+		$author$project$Accounting$GeneralJournal$DateChanged,
+		$author$project$Accounting$Ui$LabelText('Dato'),
+		$elm$core$Maybe$Nothing);
+	var bilag = A3(
+		$author$project$Accounting$Ui$numberInput,
+		$author$project$Accounting$GeneralJournal$BilagChanged,
+		$author$project$Accounting$Ui$LabelText('Bilag'),
+		$elm$core$Maybe$Nothing);
+	var belop = A3(
+		$author$project$Accounting$Ui$numberInput,
+		$author$project$Accounting$GeneralJournal$BelopChanged,
+		$author$project$Accounting$Ui$LabelText('Beløp'),
+		$elm$core$Maybe$Nothing);
 	return A2(
 		$elm$html$Html$div,
 		_List_fromArray(
 			[
-				$elm$html$Html$Attributes$class('content')
+				$elm$html$Html$Attributes$class('accounting-grid')
 			]),
 		_List_fromArray(
 			[
 				A2(
-				$elm$html$Html$div,
-				_List_fromArray(
-					[
-						$elm$html$Html$Attributes$class('folders')
-					]),
-				_List_fromArray(
-					[
-						$elm$html$Html$text('GeneralJournal')
-					]))
+				$author$project$Accounting$Ui$gridItem,
+				$author$project$Accounting$Ui$GridPosition('a1'),
+				curdate),
+				A2(
+				$author$project$Accounting$Ui$gridItem,
+				$author$project$Accounting$Ui$GridPosition('b1'),
+				debet),
+				A2(
+				$author$project$Accounting$Ui$gridItem,
+				$author$project$Accounting$Ui$GridPosition('c1'),
+				desc),
+				A2(
+				$author$project$Accounting$Ui$gridItem,
+				$author$project$Accounting$Ui$GridPosition('d1'),
+				bilag),
+				A2(
+				$author$project$Accounting$Ui$gridItem,
+				$author$project$Accounting$Ui$GridPosition('e1'),
+				belop),
+				A2(
+				$author$project$Accounting$Ui$gridItem,
+				$author$project$Accounting$Ui$GridPosition('a2'),
+				mva_amount)
 			]));
 };
 var $author$project$Accounting$HourList$view = function (model) {
@@ -6068,7 +6737,7 @@ var $author$project$Accounting$HourList$view = function (model) {
 			]));
 };
 var $elm$html$Html$footer = _VirtualDom_node('footer');
-var $author$project$Accounting$View$viewFooter = A2(
+var $author$project$Accounting$Main$viewFooter = A2(
 	$elm$html$Html$footer,
 	_List_Nil,
 	_List_fromArray(
@@ -6108,7 +6777,7 @@ var $elm$html$Html$Attributes$href = function (url) {
 		'href',
 		_VirtualDom_noJavaScriptUri(url));
 };
-var $author$project$Accounting$View$isActive = function (_v0) {
+var $author$project$Accounting$Main$isActive = function (_v0) {
 	var link = _v0.link;
 	var page = _v0.page;
 	var _v1 = _Utils_Tuple2(link, page);
@@ -6133,7 +6802,7 @@ var $author$project$Accounting$View$isActive = function (_v0) {
 var $elm$html$Html$li = _VirtualDom_node('li');
 var $elm$html$Html$nav = _VirtualDom_node('nav');
 var $elm$html$Html$ul = _VirtualDom_node('ul');
-var $author$project$Accounting$View$viewHeader = function (page) {
+var $author$project$Accounting$Main$viewHeader = function (page) {
 	var navLink = F2(
 		function (route, _v0) {
 			var url = _v0.url;
@@ -6147,7 +6816,7 @@ var $author$project$Accounting$View$viewHeader = function (page) {
 							[
 								_Utils_Tuple2(
 								'active',
-								$author$project$Accounting$View$isActive(
+								$author$project$Accounting$Main$isActive(
 									{link: route, page: page}))
 							]))
 					]),
@@ -6192,7 +6861,7 @@ var $author$project$Accounting$View$viewHeader = function (page) {
 		_List_fromArray(
 			[logo, links]));
 };
-var $author$project$Accounting$View$view = function (model) {
+var $author$project$Accounting$Main$view = function (model) {
 	var content = function () {
 		var _v0 = model.page;
 		switch (_v0.$) {
@@ -6215,9 +6884,9 @@ var $author$project$Accounting$View$view = function (model) {
 	return {
 		body: _List_fromArray(
 			[
-				$author$project$Accounting$View$viewHeader(model.page),
+				$author$project$Accounting$Main$viewHeader(model.page),
 				content,
-				$author$project$Accounting$View$viewFooter
+				$author$project$Accounting$Main$viewFooter
 			]),
 		title: 'Accounting SPA'
 	};
@@ -6230,7 +6899,7 @@ var $author$project$Accounting$Main$main = $elm$browser$Browser$application(
 		subscriptions: function (_v0) {
 			return $elm$core$Platform$Sub$none;
 		},
-		update: $author$project$Accounting$Update$update,
-		view: $author$project$Accounting$View$view
+		update: $author$project$Accounting$Main$update,
+		view: $author$project$Accounting$Main$view
 	});
 _Platform_export({'Accounting':{'Main':{'init':$author$project$Accounting$Main$main($elm$json$Json$Decode$int)(0)}}});}(this));

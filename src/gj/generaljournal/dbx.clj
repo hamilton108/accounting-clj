@@ -35,7 +35,7 @@
 
 (def fetch-ns4102
   (memoize (fn []
-    (.selectNs4102 ^GjFacade facade))))
+    (.selectDebits ^GjFacade facade))))
 
 (comment insert-generaljournal [^GeneralJournalBean gj ^GeneralJournalBean mva]
   (DB/with-session :koteriku GeneralJournalMapper

@@ -16,13 +16,13 @@
 (defn ns4102->select [^Ns4102Bean v]
   (let [text (.getText v)
         account (.getAccount v)]
-    {:name (str account " - " text) :value (str account)}))
+    {:t (str account " - " text) :v (str account)}))
 
 
 (defn last-receipts []
   (map (fn [^GeneralJournalBean x]
         {:bilag (str (.getBilag x))
-         :date (.getTransactionDate x)
+         :date (.getTransactionDateStr x)
          :debit (str (.getDebit x))
          :credit (str (.getCredit x))
          :text (.getText x)
@@ -36,24 +36,25 @@
 (defn general-journal []
   (let [bilag (DBX/fetch-by-bilag)
         bilag-1 (first bilag) 
-        bilag-dx (.getTransactionDate bilag-1)
+        bilag-dx (.getTransactionDateStr bilag-1)
         last-date (first (DBX/fetch-by-date))
-        last-date-dx (.getTransactionDate last-date)]
-    (prn bilag-dx)
-    (P/render-file "templates/generaljournal/generaljournal.html"
-      {:db-url "url"
-       :db-user "user"
+        last-date-dx (.getTransactionDateStr last-date)]
+    ;(P/render-file "templates/generaljournal/generaljournal.html"
+      {;:db-url "url"
+       ;:db-user "user"
        :ns4102 (map ns4102->select (DBX/fetch-ns4102))
        :bilag (-> bilag-1 .getBilag inc str)
        :bilag-dx bilag-dx
        :last-date last-date-dx
-       :items (last-receipts)})))
+       :items (last-receipts)}))
 
 ;[url user] (DB/dbcp :koteriku-dbcp)]
 
 
 (defroutes my-routes
-  (GET "/" request (general-journal))
+  (GET "/latestdata" []
+    (U/json-response 
+      (general-journal)))
   (PUT "/insert" [credit debit curdate bilag desc amount mva mvaamt]
     (let [gj-bean (DBX/insert bilag curdate credit debit desc amount mva mvaamt)]
       (U/json-response
