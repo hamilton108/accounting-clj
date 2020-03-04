@@ -6,6 +6,7 @@ import Accounting.Ui
         , LabelText(..)
         , SelectItem
         , SelectItems
+        , dateInput
         , gridItem
         , makeSelect
         , numberInput
@@ -13,7 +14,6 @@ import Accounting.Ui
         )
 import Html as H
 import Html.Attributes as A
-import Html.Events as E
 import Http
 import Json.Decode as JD
 import Json.Decode.Pipeline as JP
@@ -29,8 +29,44 @@ initUrl =
     mainUrl ++ "/latestdata"
 
 
+type Date
+    = Date String
+
+
+type Debit
+    = Debit String
+
+
+type Desc
+    = Desc String
+
+
+type Bilag
+    = Bilag String
+
+
+type Belop
+    = Belop String
+
+
+type MvaAmount
+    = MvaAmount String
+
+
+type Mva
+    = Mva String
+
+
 type alias Model =
     { ns4102 : SelectItems
+    , lastBilagDate : Date
+    , bilag : Bilag
+    , date : Maybe Date
+    , debit : Maybe Debit
+    , desc : Maybe Desc
+    , belop : Maybe Belop
+    , mvaAmount : Maybe MvaAmount
+    , mva : Maybe Mva
     , selectedNs4102 : Maybe String
     }
 
@@ -42,6 +78,7 @@ type Msg
     | DescChanged String
     | BilagChanged String
     | BelopChanged String
+    | MvaAmountChanged String
     | MvaChanged String
     | InitDataFetched (Result Http.Error Model)
 
@@ -49,6 +86,14 @@ type Msg
 init : ( Model, Cmd Msg )
 init =
     ( { ns4102 = []
+      , lastBilagDate = Date ""
+      , bilag = Bilag "0"
+      , date = Nothing
+      , debit = Nothing
+      , desc = Nothing
+      , belop = Nothing
+      , mvaAmount = Nothing
+      , mva = Nothing
       , selectedNs4102 = Nothing
       }
     , fetchInitData
@@ -59,7 +104,7 @@ view : Model -> H.Html Msg
 view model =
     let
         curdate =
-            textInput DateChanged (LabelText "Dato") Nothing
+            dateInput DateChanged (LabelText "Dato") Nothing
 
         debet =
             makeSelect DebitChanged "Debet" model.ns4102 Nothing
@@ -68,7 +113,11 @@ view model =
             textInput DescChanged (LabelText "Tekst") Nothing
 
         bilag =
-            numberInput BilagChanged (LabelText "Bilag") Nothing
+            let
+                (Bilag curBilag) =
+                    model.bilag
+            in
+            numberInput BilagChanged (LabelText "Bilag") (Just curBilag)
 
         belop =
             numberInput BelopChanged (LabelText "Beløp") Nothing
@@ -84,6 +133,25 @@ view model =
         , gridItem (GridPosition "e1") belop
         , gridItem (GridPosition "a2") mva_amount
         ]
+
+
+httpErr2str : Http.Error -> String
+httpErr2str err =
+    case err of
+        Http.Timeout ->
+            "Timeout"
+
+        Http.NetworkError ->
+            "NetworkError"
+
+        Http.BadUrl s ->
+            "BadUrl: " ++ s
+
+        Http.BadStatus r ->
+            "BadStatus: "
+
+        Http.BadPayload s r ->
+            "BadPayload: " ++ s
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -106,17 +174,20 @@ update msg model =
 
         DateChanged s ->
             Debug.log "Edit Changed"
-                ( model, Cmd.none )
+                ( { model | date = Just (Date s) }, Cmd.none )
 
         DescChanged s ->
             Debug.log "Edit Changed"
                 ( model, Cmd.none )
 
         BilagChanged s ->
+            ( { model | bilag = Bilag s }, Cmd.none )
+
+        BelopChanged s ->
             Debug.log "Edit Changed"
                 ( model, Cmd.none )
 
-        BelopChanged s ->
+        MvaAmountChanged s ->
             Debug.log "Edit Changed"
                 ( model, Cmd.none )
 
@@ -128,7 +199,8 @@ update msg model =
             ( initData, Cmd.none )
 
         InitDataFetched (Err err) ->
-            ( model, Cmd.none )
+            Debug.log (httpErr2str err)
+                ( model, Cmd.none )
 
 
 selectItemDecoder : JD.Decoder SelectItem
@@ -138,16 +210,47 @@ selectItemDecoder =
         (JD.field "t" JD.string)
 
 
+bilagDecoder : JD.Decoder Bilag
+bilagDecoder =
+    JD.map Bilag
+        JD.string
+
+
+
+--(JD.field "bilag" JD.string)
+
+
+lastBilagDateDecoder : JD.Decoder Date
+lastBilagDateDecoder =
+    JD.map Date
+        JD.string
+
+
+
+--(JD.field "bilag-dx" JD.string)
+
+
 initDataDecoder : JD.Decoder Model
 initDataDecoder =
     JD.succeed Model
         |> JP.required "ns4102" (JD.list selectItemDecoder)
+        |> JP.required "bilag-dx" lastBilagDateDecoder
+        |> JP.required "bilag" bilagDecoder
+        |> JP.hardcoded Nothing
+        |> JP.hardcoded Nothing
+        |> JP.hardcoded Nothing
+        |> JP.hardcoded Nothing
+        |> JP.hardcoded Nothing
+        |> JP.hardcoded Nothing
         |> JP.hardcoded Nothing
 
 
 fetchInitData : Cmd Msg
 fetchInitData =
-    Http.send InitDataFetched <|
+    Debug.log "fetchInitData"
+        Http.send
+        InitDataFetched
+    <|
         Http.get initUrl initDataDecoder
 
 

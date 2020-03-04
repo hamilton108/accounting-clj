@@ -3,6 +3,7 @@ module Accounting.Ui exposing
     , LabelText(..)
     , SelectItem
     , SelectItems
+    , dateInput
     , gridItem
     , makeSelect
     , numberInput
@@ -76,6 +77,11 @@ textInput event labelText inputValue =
 numberInput : (String -> msg) -> LabelText -> Maybe String -> Html msg
 numberInput event labelText inputValue =
     input event (InputType "number") labelText inputValue
+
+
+dateInput : (String -> msg) -> LabelText -> Maybe String -> Html msg
+dateInput event labelText inputValue =
+    input event (InputType "date") labelText inputValue
 
 
 type alias SelectItem =
