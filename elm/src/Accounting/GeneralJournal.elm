@@ -35,34 +35,22 @@ initUrl =
     mainUrl ++ "/latestdata"
 
 
-type Date
-    = Date (Maybe String)
-
-
-type Desc
-    = Desc (Maybe String)
+type alias Field =
+    Maybe String
 
 
 type Bilag
     = Bilag String
 
 
-type Belop
-    = Belop (Maybe String)
-
-
-type Mva
-    = Mva (Maybe String)
-
-
 type alias Model =
     { ns4102 : SelectItems
     , lastBilagDate : String
     , bilag : Bilag
-    , date : Date
-    , desc : Desc
-    , belop : Belop
-    , mva : Mva
+    , date : Field
+    , desc : Field
+    , belop : Field
+    , mva : Field
     , selectedNs4102 : Maybe String
     }
 
@@ -99,10 +87,10 @@ init =
     ( { ns4102 = []
       , lastBilagDate = ""
       , bilag = Bilag "0"
-      , date = Date Nothing
-      , desc = Desc Nothing
-      , belop = Belop Nothing
-      , mva = Mva Nothing
+      , date = Nothing
+      , desc = Nothing
+      , belop = Nothing
+      , mva = Nothing
       , selectedNs4102 = Nothing
       }
     , fetchInitData
@@ -113,11 +101,7 @@ view : Model -> H.Html Msg
 view model =
     let
         curdate =
-            let
-                (Date d) =
-                    model.date
-            in
-            dateInput DateChanged (LabelText "Dato") d
+            dateInput DateChanged (LabelText "Dato") model.date
 
         debet =
             makeSelect DebitChanged "Debet" model.ns4102 model.selectedNs4102
@@ -126,11 +110,7 @@ view model =
             makeSelect PresetChanged "Preset" myPresets Nothing
 
         desc =
-            let
-                (Desc d) =
-                    model.desc
-            in
-            textInput DescChanged (LabelText "Tekst") d
+            textInput DescChanged (LabelText "Tekst") model.desc
 
         bilag =
             let
@@ -140,18 +120,10 @@ view model =
             numberInput BilagChanged (LabelText "Bilag") (Just curBilag)
 
         belop =
-            let
-                (Belop b) =
-                    model.belop
-            in
-            numberInput BelopChanged (LabelText "Beløp") b
+            numberInput BelopChanged (LabelText "Beløp") model.belop
 
         mva =
-            let
-                (Mva m) =
-                    model.mva
-            in
-            numberInput MvaChanged (LabelText "Mva beløp") m
+            numberInput MvaChanged (LabelText "Mva beløp") model.mva
 
         btnOk =
             button Save Success "Lagre" True
@@ -209,20 +181,20 @@ update msg model =
             ( updatePreset model s, Cmd.none )
 
         DateChanged s ->
-            ( { model | date = Date (Just s) }, Cmd.none )
+            ( { model | date = Just s }, Cmd.none )
 
         DescChanged s ->
-            ( { model | desc = Desc (Just s) }, Cmd.none )
+            ( { model | desc = Just s }, Cmd.none )
 
         BilagChanged s ->
             ( { model | bilag = Bilag s }, Cmd.none )
 
         BelopChanged s ->
-            ( { model | belop = Belop (Just s) }, Cmd.none )
+            ( { model | belop = Just s }, Cmd.none )
 
         MvaChanged s ->
             Debug.log "update"
-                ( { model | mva = Mva (Just s) }, Cmd.none )
+                ( { model | mva = Just s }, Cmd.none )
 
         InitDataFetched (Ok initData) ->
             ( initData, Cmd.none )
@@ -348,10 +320,10 @@ initDataDecoder =
         |> JP.required "ns4102" (JD.list selectItemDecoder)
         |> JP.required "bilag-dx" JD.string
         |> JP.required "bilag" bilagDecoder
-        |> JP.hardcoded (Date Nothing)
-        |> JP.hardcoded (Desc Nothing)
-        |> JP.hardcoded (Belop Nothing)
-        |> JP.hardcoded (Mva Nothing)
+        |> JP.hardcoded Nothing
+        |> JP.hardcoded Nothing
+        |> JP.hardcoded Nothing
+        |> JP.hardcoded Nothing
         |> JP.hardcoded Nothing
 
 
