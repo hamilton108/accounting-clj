@@ -1,8 +1,10 @@
 module Accounting.Ui exposing
-    ( GridPosition(..)
+    ( BootstrapButton(..)
+    , GridPosition(..)
     , LabelText(..)
     , SelectItem
     , SelectItems
+    , button
     , dateInput
     , gridItem
     , makeSelect
@@ -58,7 +60,7 @@ input event (InputType inputType) (LabelText labelText) inputValue =
         myInput =
             case inputValue of
                 Nothing ->
-                    H.input [ A.type_ inputType, A.class "form-control", E.onInput event ] []
+                    H.input [ A.type_ inputType, A.class "form-control", E.onInput event, A.value "" ] []
 
                 Just val ->
                     H.input [ A.type_ inputType, A.class "form-control", E.onInput event, A.value val ] []
@@ -136,3 +138,44 @@ makeSelect event caption payload selected =
             ]
             px
         ]
+
+
+type BootstrapButton
+    = Success
+    | Danger
+    | DlgSuccess
+    | DlgDanger
+    | Header
+    | HeaderDanger
+
+
+buttonClass : BootstrapButton -> String
+buttonClass b =
+    case b of
+        Success ->
+            "btn btn-outline-success"
+
+        Danger ->
+            "btn btn-outline-danger"
+
+        DlgSuccess ->
+            "btn btn-outline-success btn-modal-dlg"
+
+        DlgDanger ->
+            "btn btn-outline-danger btn-modal-dlg"
+
+        Header ->
+            "btn main-btn btn-outline-success"
+
+        HeaderDanger ->
+            "btn main-btn btn-outline-danger"
+
+
+button :
+    a
+    -> BootstrapButton
+    -> String
+    -> Bool
+    -> VD.Node a
+button clickEvent b caption isEnabled =
+    H.button [ A.class (buttonClass b), E.onClick clickEvent, A.type_ "button", A.disabled (not isEnabled) ] [ H.text caption ]

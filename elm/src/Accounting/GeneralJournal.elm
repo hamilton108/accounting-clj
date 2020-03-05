@@ -1,11 +1,13 @@
-module Accounting.GeneralJournal exposing (Model, Msg(..), init, update, view)
+module Accounting.GeneralJournal exposing (Model, Msg(..), Tx(..), init, update, view)
 
 import Accounting.Ui
     exposing
-        ( GridPosition(..)
+        ( BootstrapButton(..)
+        , GridPosition(..)
         , LabelText(..)
         , SelectItem
         , SelectItems
+        , button
         , dateInput
         , gridItem
         , makeSelect
@@ -19,6 +21,10 @@ import Json.Decode as JD
 import Json.Decode.Pipeline as JP
 
 
+type Tx
+    = Tx (Maybe String)
+
+
 mainUrl : String
 mainUrl =
     "/generaljournal"
@@ -30,15 +36,11 @@ initUrl =
 
 
 type Date
-    = Date String
-
-
-type Debit
-    = Debit String
+    = Date (Maybe String)
 
 
 type Desc
-    = Desc String
+    = Desc (Maybe String)
 
 
 type Bilag
@@ -46,39 +48,48 @@ type Bilag
 
 
 type Belop
-    = Belop String
-
-
-type MvaAmount
-    = MvaAmount String
+    = Belop (Maybe String)
 
 
 type Mva
-    = Mva String
+    = Mva (Maybe String)
 
 
 type alias Model =
     { ns4102 : SelectItems
-    , lastBilagDate : Date
+    , lastBilagDate : String
     , bilag : Bilag
-    , date : Maybe Date
-    , debit : Maybe Debit
-    , desc : Maybe Desc
-    , belop : Maybe Belop
-    , mvaAmount : Maybe MvaAmount
-    , mva : Maybe Mva
+    , date : Date
+    , desc : Desc
+    , belop : Belop
+    , mva : Mva
     , selectedNs4102 : Maybe String
     }
 
 
+myPresets : SelectItems
+myPresets =
+    [ { val = "1", txt = "Taxi" }
+    , { val = "2", txt = "Datautstyr" }
+    , { val = "3", txt = "NextGenTel" }
+    , { val = "4", txt = "NetCom" }
+    , { val = "5", txt = "Telenor" }
+    , { val = "6", txt = "Obos" }
+    , { val = "7", txt = "Hafslund" }
+    , { val = "8", txt = "Lunsj" }
+    , { val = "9", txt = "Overtidsmat" }
+    , { val = "10", txt = "Ruter mnd kort" }
+    ]
+
+
 type Msg
-    = Noop
+    = Save
     | DateChanged String
     | DebitChanged String
+    | PresetChanged String
     | DescChanged String
     | BilagChanged String
     | BelopChanged String
-    | MvaAmountChanged String
     | MvaChanged String
     | InitDataFetched (Result Http.Error Model)
 
@@ -86,14 +97,12 @@ type Msg
 init : ( Model, Cmd Msg )
 init =
     ( { ns4102 = []
-      , lastBilagDate = Date ""
+      , lastBilagDate = ""
       , bilag = Bilag "0"
-      , date = Nothing
-      , debit = Nothing
-      , desc = Nothing
-      , belop = Nothing
-      , mvaAmount = Nothing
-      , mva = Nothing
+      , date = Date Nothing
+      , desc = Desc Nothing
+      , belop = Belop Nothing
+      , mva = Mva Nothing
       , selectedNs4102 = Nothing
       }
     , fetchInitData
@@ -104,13 +113,24 @@ view : Model -> H.Html Msg
 view model =
     let
         curdate =
-            dateInput DateChanged (LabelText "Dato") Nothing
+            let
+                (Date d) =
+                    model.date
+            in
+            dateInput DateChanged (LabelText "Dato") d
 
         debet =
-            makeSelect DebitChanged "Debet" model.ns4102 Nothing
+            makeSelect DebitChanged "Debet" model.ns4102 model.selectedNs4102
+
+        presets =
+            makeSelect PresetChanged "Preset" myPresets Nothing
 
         desc =
-            textInput DescChanged (LabelText "Tekst") Nothing
+            let
+                (Desc d) =
+                    model.desc
+            in
+            textInput DescChanged (LabelText "Tekst") d
 
         bilag =
             let
@@ -120,10 +140,21 @@ view model =
             numberInput BilagChanged (LabelText "Bilag") (Just curBilag)
 
         belop =
-            numberInput BelopChanged (LabelText "Beløp") Nothing
+            let
+                (Belop b) =
+                    model.belop
+            in
+            numberInput BelopChanged (LabelText "Beløp") b
 
-        mva_amount =
-            numberInput MvaChanged (LabelText "Mva beløp") (Just "0.0")
+        mva =
+            let
+                (Mva m) =
+                    model.mva
+            in
+            numberInput MvaChanged (LabelText "Mva beløp") m
+
+        btnOk =
+            button Save Success "Lagre" True
     in
     H.div [ A.class "accounting-grid" ]
         [ gridItem (GridPosition "a1") curdate
@@ -131,7 +162,9 @@ view model =
         , gridItem (GridPosition "c1") desc
         , gridItem (GridPosition "d1") bilag
         , gridItem (GridPosition "e1") belop
-        , gridItem (GridPosition "a2") mva_amount
+        , gridItem (GridPosition "a2") presets
+        , gridItem (GridPosition "b2") mva
+        , gridItem (GridPosition "c2") btnOk
         ]
 
 
@@ -157,8 +190,9 @@ httpErr2str err =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        Noop ->
-            ( model, Cmd.none )
+        Save ->
+            Debug.log "save"
+                ( model, Cmd.none )
 
         DebitChanged s ->
             let
@@ -169,31 +203,26 @@ update msg model =
                     else
                         Just s
             in
-            Debug.log "DebitChanged"
-                ( { model | selectedNs4102 = curNs4102 }, Cmd.none )
+            ( { model | selectedNs4102 = curNs4102 }, Cmd.none )
+
+        PresetChanged s ->
+            ( updatePreset model s, Cmd.none )
 
         DateChanged s ->
-            Debug.log "Edit Changed"
-                ( { model | date = Just (Date s) }, Cmd.none )
+            ( { model | date = Date (Just s) }, Cmd.none )
 
         DescChanged s ->
-            Debug.log "Edit Changed"
-                ( model, Cmd.none )
+            ( { model | desc = Desc (Just s) }, Cmd.none )
 
         BilagChanged s ->
             ( { model | bilag = Bilag s }, Cmd.none )
 
         BelopChanged s ->
-            Debug.log "Edit Changed"
-                ( model, Cmd.none )
-
-        MvaAmountChanged s ->
-            Debug.log "Edit Changed"
-                ( model, Cmd.none )
+            ( { model | belop = Belop (Just s) }, Cmd.none )
 
         MvaChanged s ->
-            Debug.log "Edit Changed"
-                ( model, Cmd.none )
+            Debug.log "update"
+                ( { model | mva = Mva (Just s) }, Cmd.none )
 
         InitDataFetched (Ok initData) ->
             ( initData, Cmd.none )
@@ -201,6 +230,94 @@ update msg model =
         InitDataFetched (Err err) ->
             Debug.log (httpErr2str err)
                 ( model, Cmd.none )
+
+
+updatePreset : Model -> String -> Model
+updatePreset model preset =
+    let
+        ( curDebit, curDesc ) =
+            case preset of
+                "1" ->
+                    ( "7140", "Taxi" )
+
+                _ ->
+                    ( "-", "" )
+    in
+    { model | selectedNs4102 = Just curDebit }
+
+
+
+{-
+   $("#preset").click(function() {
+       var tpl_id = $("#preset").val();
+       $("#mvaamt").val('0.0');
+       switch (tpl_id) {
+           case '1':
+               $("#credit").val('1902');
+               $("#debit").val('7140');
+               $("#mva").val('-1');
+               $("#desc").val('Taxi');
+               break;
+           case '2':
+               $("#credit").val('1902');
+               $("#debit").val('6581');
+               $("#mva").val('2711');
+               $("#desc").val('Datautstyr');
+               break;
+           case '3':
+               $("#credit").val('1902');
+               $("#debit").val('6910');
+               $("#mva").val('2711');
+               $("#desc").val('NextGenTel');
+               break;
+           case '4':
+               $("#credit").val('1902');
+               $("#debit").val('6900');
+               $("#mva").val('2711');
+               $("#desc").val('NetCom');
+               break;
+           case '5':
+               $("#credit").val('1902');
+               $("#debit").val('6900');
+               $("#mva").val('2711');
+               $("#desc").val('Telenor');
+               break;
+           case '6':
+               $("#credit").val('1902');
+               $("#debit").val('6300');
+               $("#mva").val('-1');
+               $("#desc").val('OBOS');
+               break;
+           case '7':
+               $("#credit").val('1902');
+               $("#debit").val('6340');
+               $("#mva").val('-1');
+               $("#desc").val('Hafslund');
+               break;
+           case '8':
+               $("#credit").val('1902');
+               $("#debit").val('7160');
+               $("#mva").val('-1');
+               $("#desc").val('Lunsj');
+               break;
+           case '9':
+               $("#credit").val('1902');
+               $("#debit").val('7160');
+               $("#mva").val('-1');
+               $("#desc").val('Overtidsmat');
+               break;
+           case '10':
+               $("#credit").val('1902');
+               $("#debit").val('7140');
+               $("#mva").val('-1');
+               $("#desc").val('Ruter mnd kort');
+               break;
+           default:
+               $("#credit").val('na');
+               $("#debit").val('na');
+               $("#mva").val('-1');
+               $("#desc").val('');
+-}
 
 
 selectItemDecoder : JD.Decoder SelectItem
@@ -217,41 +334,30 @@ bilagDecoder =
 
 
 
---(JD.field "bilag" JD.string)
-
-
-lastBilagDateDecoder : JD.Decoder Date
-lastBilagDateDecoder =
-    JD.map Date
-        JD.string
-
-
-
---(JD.field "bilag-dx" JD.string)
+{-
+   lastBilagDateDecoder : JD.Decoder Date
+   lastBilagDateDecoder =
+       JD.map Date
+           (JD.nullable JD.string)
+-}
 
 
 initDataDecoder : JD.Decoder Model
 initDataDecoder =
     JD.succeed Model
         |> JP.required "ns4102" (JD.list selectItemDecoder)
-        |> JP.required "bilag-dx" lastBilagDateDecoder
+        |> JP.required "bilag-dx" JD.string
         |> JP.required "bilag" bilagDecoder
-        |> JP.hardcoded Nothing
-        |> JP.hardcoded Nothing
-        |> JP.hardcoded Nothing
-        |> JP.hardcoded Nothing
-        |> JP.hardcoded Nothing
-        |> JP.hardcoded Nothing
+        |> JP.hardcoded (Date Nothing)
+        |> JP.hardcoded (Desc Nothing)
+        |> JP.hardcoded (Belop Nothing)
+        |> JP.hardcoded (Mva Nothing)
         |> JP.hardcoded Nothing
 
 
 fetchInitData : Cmd Msg
 fetchInitData =
-    Debug.log "fetchInitData"
-        Http.send
-        InitDataFetched
-    <|
-        Http.get initUrl initDataDecoder
+    Http.send InitDataFetched <| Http.get initUrl initDataDecoder
 
 
 
