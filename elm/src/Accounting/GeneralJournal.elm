@@ -8,7 +8,6 @@ import Accounting.Ui
         , SelectItem
         , SelectItems
         , button
-        , checkBoxInput
         , dateInput
         , gridItem
         , makeSelect
@@ -177,6 +176,24 @@ httpErr2str err =
             "BadPayload: " ++ s
 
 
+calcMvaAmount : Bool -> Maybe String -> Maybe String
+calcMvaAmount cb belop =
+    if cb == False then
+        Nothing
+
+    else
+        case belop of
+            Nothing ->
+                Nothing
+
+            Just b ->
+                let
+                    bx =
+                        Maybe.withDefault 0 (String.toFloat b)
+                in
+                Just (String.fromFloat (bx * 0.25))
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
@@ -196,7 +213,14 @@ update msg model =
             ( { model | selectedNs4102 = curNs4102 }, Cmd.none )
 
         PresetChanged s ->
-            ( updatePreset model s, Cmd.none )
+            let
+                newModel =
+                    updatePreset model s
+
+                curMvaAmount =
+                    calcMvaAmount newModel.mva newModel.belop
+            in
+            ( { newModel | mvaAmount = curMvaAmount }, Cmd.none )
 
         DateChanged s ->
             ( { model | date = Just s }, Cmd.none )
@@ -208,7 +232,11 @@ update msg model =
             ( { model | bilag = Bilag s }, Cmd.none )
 
         BelopChanged s ->
-            ( { model | belop = Just s }, Cmd.none )
+            let
+                curMvaAmount =
+                    calcMvaAmount model.mva model.belop
+            in
+            ( { model | belop = Just s, mvaAmount = curMvaAmount }, Cmd.none )
 
         MvaChanged s ->
             Debug.log "update"
@@ -221,8 +249,12 @@ update msg model =
             Debug.log (httpErr2str err)
                 ( model, Cmd.none )
 
-        IsMva25Changed b ->
-            ( { model | mva = b }, Cmd.none )
+        IsMva25Changed cb ->
+            let
+                curMvaAmount =
+                    calcMvaAmount cb model.belop
+            in
+            ( { model | mva = cb, mvaAmount = curMvaAmount }, Cmd.none )
 
 
 
