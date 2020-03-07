@@ -15,9 +15,12 @@
             "elm/json": "1.0.0",
             "elm/time": "1.0.0",
             "elm/url": "1.0.0",
-            "elm/virtual-dom": "1.0.0"
+            "elm/virtual-dom": "1.0.0",
+            "rundis/elm-bootstrap": "5.2.0"
         },
-        "indirect": {}
+        "indirect": {
+            "avh4/elm-color": "1.0.0"
+        }
     },
     "test-dependencies": {
         "direct": {

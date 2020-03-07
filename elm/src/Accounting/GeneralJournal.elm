@@ -8,12 +8,14 @@ import Accounting.Ui
         , SelectItem
         , SelectItems
         , button
+        , checkBoxInput
         , dateInput
         , gridItem
         , makeSelect
         , numberInput
         , textInput
         )
+import Bootstrap.Form.Checkbox as Checkbox
 import Html as H
 import Html.Attributes as A
 import Http
@@ -39,6 +41,10 @@ type alias Field =
     Maybe String
 
 
+type alias NumField =
+    Maybe Float
+
+
 type Bilag
     = Bilag String
 
@@ -50,7 +56,8 @@ type alias Model =
     , date : Field
     , desc : Field
     , belop : Field
-    , mva : Field
+    , mvaAmount : Field
+    , mva : Bool
     , selectedNs4102 : Maybe String
     }
 
@@ -80,6 +87,7 @@ type Msg
     | BelopChanged String
     | MvaChanged String
     | InitDataFetched (Result Http.Error Model)
+    | IsMva25Changed Bool
 
 
 init : ( Model, Cmd Msg )
@@ -90,7 +98,8 @@ init =
       , date = Nothing
       , desc = Nothing
       , belop = Nothing
-      , mva = Nothing
+      , mvaAmount = Nothing
+      , mva = True
       , selectedNs4102 = Nothing
       }
     , fetchInitData
@@ -122,8 +131,16 @@ view model =
         belop =
             numberInput BelopChanged (LabelText "Beløp") model.belop
 
-        mva =
-            numberInput MvaChanged (LabelText "Mva beløp") model.mva
+        mvaAmount =
+            numberInput MvaChanged (LabelText "Mva beløp") model.mvaAmount
+
+        isMva25 =
+            Checkbox.checkbox
+                [ Checkbox.id "cb-mva"
+                , Checkbox.checked model.mva
+                , Checkbox.onCheck IsMva25Changed
+                ]
+                "Mva 25 %"
 
         btnOk =
             button Save Success "Lagre" True
@@ -135,8 +152,9 @@ view model =
         , gridItem (GridPosition "d1") bilag
         , gridItem (GridPosition "e1") belop
         , gridItem (GridPosition "a2") presets
-        , gridItem (GridPosition "b2") mva
-        , gridItem (GridPosition "c2") btnOk
+        , gridItem (GridPosition "b2") mvaAmount
+        , gridItem (GridPosition "c2") isMva25
+        , gridItem (GridPosition "d2") btnOk
         ]
 
 
@@ -194,7 +212,7 @@ update msg model =
 
         MvaChanged s ->
             Debug.log "update"
-                ( { model | mva = Just s }, Cmd.none )
+                ( { model | mvaAmount = Just s }, Cmd.none )
 
         InitDataFetched (Ok initData) ->
             ( initData, Cmd.none )
@@ -203,92 +221,128 @@ update msg model =
             Debug.log (httpErr2str err)
                 ( model, Cmd.none )
 
-
-updatePreset : Model -> String -> Model
-updatePreset model preset =
-    let
-        ( curDebit, curDesc ) =
-            case preset of
-                "1" ->
-                    ( "7140", "Taxi" )
-
-                _ ->
-                    ( "-", "" )
-    in
-    { model | selectedNs4102 = Just curDebit }
+        IsMva25Changed b ->
+            ( { model | mva = b }, Cmd.none )
 
 
 
 {-
-   $("#preset").click(function() {
-       var tpl_id = $("#preset").val();
-       $("#mvaamt").val('0.0');
-       switch (tpl_id) {
-           case '1':
-               $("#credit").val('1902');
-               $("#debit").val('7140');
-               $("#mva").val('-1');
-               $("#desc").val('Taxi');
-               break;
-           case '2':
-               $("#credit").val('1902');
-               $("#debit").val('6581');
-               $("#mva").val('2711');
-               $("#desc").val('Datautstyr');
-               break;
-           case '3':
-               $("#credit").val('1902');
-               $("#debit").val('6910');
-               $("#mva").val('2711');
-               $("#desc").val('NextGenTel');
-               break;
-           case '4':
-               $("#credit").val('1902');
-               $("#debit").val('6900');
-               $("#mva").val('2711');
-               $("#desc").val('NetCom');
-               break;
-           case '5':
-               $("#credit").val('1902');
-               $("#debit").val('6900');
-               $("#mva").val('2711');
-               $("#desc").val('Telenor');
-               break;
-           case '6':
-               $("#credit").val('1902');
-               $("#debit").val('6300');
-               $("#mva").val('-1');
-               $("#desc").val('OBOS');
-               break;
-           case '7':
-               $("#credit").val('1902');
-               $("#debit").val('6340');
-               $("#mva").val('-1');
-               $("#desc").val('Hafslund');
-               break;
-           case '8':
-               $("#credit").val('1902');
-               $("#debit").val('7160');
-               $("#mva").val('-1');
-               $("#desc").val('Lunsj');
-               break;
-           case '9':
-               $("#credit").val('1902');
-               $("#debit").val('7160');
-               $("#mva").val('-1');
-               $("#desc").val('Overtidsmat');
-               break;
-           case '10':
-               $("#credit").val('1902');
-               $("#debit").val('7140');
-               $("#mva").val('-1');
-               $("#desc").val('Ruter mnd kort');
-               break;
-           default:
-               $("#credit").val('na');
-               $("#debit").val('na');
-               $("#mva").val('-1');
-               $("#desc").val('');
+   let
+       curMva =
+           not model.mva
+
+       curMvaAmount =
+           if curMva == False then
+               Nothing
+
+           else
+               case model.belop of
+                   Nothing ->
+                       Nothing
+
+                   Just b ->
+                       let
+                           bx =
+                               Maybe.withDefault 0 (String.toFloat b)
+                       in
+                       Just (String.fromFloat (bx * 0.25))
+   in
+   ( { model | mva = not model.mva, mvaAmount = curMvaAmount }, Cmd.none )
+-}
+
+
+updatePreset : Model -> String -> Model
+updatePreset model preset =
+    let
+        ( curDebit, curDesc, curMva ) =
+            case preset of
+                "1" ->
+                    ( "7140", "Taxi", False )
+
+                "2" ->
+                    ( "6581", "Datautstyr", True )
+
+                "3" ->
+                    ( "6910", "NextGenTel", True )
+
+                "4" ->
+                    ( "6900", "NetCom", True )
+
+                "5" ->
+                    ( "6900", "Telenor", True )
+
+                "6" ->
+                    ( "6300", "OBOS", False )
+
+                "7" ->
+                    ( "6340", "Hafslund", False )
+
+                "8" ->
+                    ( "7160", "Lunsj", False )
+
+                "9" ->
+                    ( "7160", "Overtidsmat", False )
+
+                "10" ->
+                    ( "7140", "Ruter mnd kort", False )
+
+                _ ->
+                    ( "-", "", False )
+    in
+    { model
+        | selectedNs4102 = Just curDebit
+        , desc = Just curDesc
+        , mva = curMva
+    }
+
+
+
+{-
+   case '1':
+       $("#debit").val('7140');
+       $("#mva").val('-1');
+       $("#desc").val('Taxi');
+   case '2':
+       $("#debit").val('6581');
+       $("#mva").val('2711');
+       $("#desc").val('Datautstyr');
+   case '3':
+       $("#debit").val('6910');
+       $("#mva").val('2711');
+       $("#desc").val('NextGenTel');
+   case '4':
+       $("#debit").val('6900');
+       $("#mva").val('2711');
+       $("#desc").val('NetCom');
+   case '5':
+       $("#debit").val('6900');
+       $("#mva").val('2711');
+       $("#desc").val('Telenor');
+   case '6':
+       $("#debit").val('6300');
+       $("#mva").val('-1');
+       $("#desc").val('OBOS');
+   case '7':
+       $("#debit").val('6340');
+       $("#mva").val('-1');
+       $("#desc").val('Hafslund');
+   case '8':
+       $("#debit").val('7160');
+       $("#mva").val('-1');
+       $("#desc").val('Lunsj');
+   case '9':
+       $("#debit").val('7160');
+       $("#mva").val('-1');
+       $("#desc").val('Overtidsmat');
+   case '10':
+       $("#debit").val('7140');
+       $("#mva").val('-1');
+       $("#desc").val('Ruter mnd kort');
+   default:
+       $("#credit").val('na');
+       $("#debit").val('na');
+       $("#mva").val('-1');
+       $("#desc").val('');
 -}
 
 
@@ -324,6 +378,7 @@ initDataDecoder =
         |> JP.hardcoded Nothing
         |> JP.hardcoded Nothing
         |> JP.hardcoded Nothing
+        |> JP.hardcoded True
         |> JP.hardcoded Nothing
 
 

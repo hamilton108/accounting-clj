@@ -5,6 +5,7 @@ module Accounting.Ui exposing
     , SelectItem
     , SelectItems
     , button
+    , checkBoxInput
     , dateInput
     , gridItem
     , makeSelect
@@ -57,18 +58,69 @@ input event (InputType inputType) (LabelText labelText) inputValue =
         myLabel =
             H.label [] [ H.text labelText ]
 
-        myInput =
+        myVal =
             case inputValue of
                 Nothing ->
-                    H.input [ A.type_ inputType, A.class "form-control", E.onInput event, A.value "" ] []
+                    ""
 
                 Just val ->
-                    H.input [ A.type_ inputType, A.class "form-control", E.onInput event, A.value val ] []
+                    val
+
+        myInput =
+            H.input [ A.type_ inputType, A.class "form-control", E.onInput event, A.value myVal ] []
     in
     H.div [ A.class "form-group" ]
         [ myLabel
         , myInput
         ]
+
+
+toString : Bool -> String
+toString bool =
+    if bool then
+        "True"
+
+    else
+        "False"
+
+
+checkBoxInput : msg -> LabelText -> Bool -> Html msg
+checkBoxInput event (LabelText label) isChecked =
+    let
+        myInput =
+            if isChecked == True then
+                H.input [ E.onClick event, A.id label, A.type_ "checkbox", A.class "form-check-input", A.attribute "checked" "checked" ] []
+
+            else
+                H.input [ E.onClick event, A.id label, A.type_ "checkbox", A.class "form-check-input" ] []
+    in
+    Debug.log (toString isChecked)
+        H.div
+        [ A.class "form-check form-check-inline" ]
+        [ myInput
+        , H.label [ A.attribute "for" label, A.class "form-check-label" ] [ H.text label ]
+        ]
+
+
+
+{-
+   checkBoxInput : (String -> msg) -> LabelText -> GridPosition -> Bool -> Html msg
+   checkBoxInput event (LabelText label) (GridPosition gridPos) isChecked =
+       let
+           myInput =
+               if isChecked == True then
+                   H.input [ E.onClick event, A.id label, A.type_ "checkbox", A.class "form-check-input", A.attribute "checked" "checked" ] []
+
+               else
+                   H.input [ E.onClick event, A.id label, A.type_ "checkbox", A.class "form-check-input" ] []
+       in
+       H.div [ A.class gridPos ]
+           [ H.div [ A.class "form-check form-check-inline" ]
+               [ myInput
+               , H.label [ A.attribute "for" label, A.class "form-check-label" ] [ H.text label ]
+               ]
+           ]
+-}
 
 
 textInput : (String -> msg) -> LabelText -> Maybe String -> Html msg
