@@ -15,11 +15,13 @@ import Accounting.Ui
         , textInput
         )
 import Bootstrap.Form.Checkbox as Checkbox
+import Common.Util as Util
 import Html as H
 import Html.Attributes as A
 import Http
 import Json.Decode as JD
 import Json.Decode.Pipeline as JP
+import Json.Encode as JE
 
 
 type Tx
@@ -34,6 +36,11 @@ mainUrl =
 initUrl : String
 initUrl =
     mainUrl ++ "/latestdata"
+
+
+saveUrl : String
+saveUrl =
+    mainUrl ++ "/insert"
 
 
 type alias Field =
@@ -86,6 +93,7 @@ type Msg
     | BelopChanged String
     | MvaChanged String
     | InitDataFetched (Result Http.Error Model)
+    | DataSaved (Result Http.Error JsonStatus)
     | IsMva25Changed Bool
 
 
@@ -194,12 +202,45 @@ calcMvaAmount cb belop =
                 Just (String.fromFloat (bx * 0.25))
 
 
+
+{-
+   stringToInt : Maybe String -> Int
+   stringToInt s =
+       case s of
+           Nothing ->
+               Nothing
+
+           Just x ->
+               Maybe.withDefault 0 (String.toInt x)
+
+
+   stringToFloat : Maybe String -> Int
+   stringToFloat s =
+       case s of
+           Nothing ->
+               Nothing
+
+           Just x ->
+               Maybe.withDefault 0 (String.toFloat x)
+-}
+
+
+model2save : Model -> SaveToDb
+model2save model =
+    { bilag = 1
+    , curdate = "s"
+    , debit = 2
+    , desc = "sfs"
+    , amount = 120.2
+    , mva = 12.3
+    }
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         Save ->
-            Debug.log "save"
-                ( model, Cmd.none )
+            ( model, saveToDb )
 
         DebitChanged s ->
             let
@@ -249,38 +290,20 @@ update msg model =
             Debug.log (httpErr2str err)
                 ( model, Cmd.none )
 
+        DataSaved (Ok jsonStatus) ->
+            Debug.log jsonStatus.msg
+                ( model, Cmd.none )
+
+        DataSaved (Err err) ->
+            Debug.log (httpErr2str err)
+                ( model, Cmd.none )
+
         IsMva25Changed cb ->
             let
                 curMvaAmount =
                     calcMvaAmount cb model.belop
             in
             ( { model | mva = cb, mvaAmount = curMvaAmount }, Cmd.none )
-
-
-
-{-
-   let
-       curMva =
-           not model.mva
-
-       curMvaAmount =
-           if curMva == False then
-               Nothing
-
-           else
-               case model.belop of
-                   Nothing ->
-                       Nothing
-
-                   Just b ->
-                       let
-                           bx =
-                               Maybe.withDefault 0 (String.toFloat b)
-                       in
-                       Just (String.fromFloat (bx * 0.25))
-   in
-   ( { model | mva = not model.mva, mvaAmount = curMvaAmount }, Cmd.none )
--}
 
 
 updatePreset : Model -> String -> Model
@@ -328,56 +351,6 @@ updatePreset model preset =
     }
 
 
-
-{-
-   case '1':
-       $("#debit").val('7140');
-       $("#mva").val('-1');
-       $("#desc").val('Taxi');
-   case '2':
-       $("#debit").val('6581');
-       $("#mva").val('2711');
-       $("#desc").val('Datautstyr');
-   case '3':
-       $("#debit").val('6910');
-       $("#mva").val('2711');
-       $("#desc").val('NextGenTel');
-   case '4':
-       $("#debit").val('6900');
-       $("#mva").val('2711');
-       $("#desc").val('NetCom');
-   case '5':
-       $("#debit").val('6900');
-       $("#mva").val('2711');
-       $("#desc").val('Telenor');
-   case '6':
-       $("#debit").val('6300');
-       $("#mva").val('-1');
-       $("#desc").val('OBOS');
-   case '7':
-       $("#debit").val('6340');
-       $("#mva").val('-1');
-       $("#desc").val('Hafslund');
-   case '8':
-       $("#debit").val('7160');
-       $("#mva").val('-1');
-       $("#desc").val('Lunsj');
-   case '9':
-       $("#debit").val('7160');
-       $("#mva").val('-1');
-       $("#desc").val('Overtidsmat');
-   case '10':
-       $("#debit").val('7140');
-       $("#mva").val('-1');
-       $("#desc").val('Ruter mnd kort');
-   default:
-       $("#credit").val('na');
-       $("#debit").val('na');
-       $("#mva").val('-1');
-       $("#desc").val('');
--}
-
-
 selectItemDecoder : JD.Decoder SelectItem
 selectItemDecoder =
     JD.map2 SelectItem
@@ -389,15 +362,6 @@ bilagDecoder : JD.Decoder Bilag
 bilagDecoder =
     JD.map Bilag
         JD.string
-
-
-
-{-
-   lastBilagDateDecoder : JD.Decoder Date
-   lastBilagDateDecoder =
-       JD.map Date
-           (JD.nullable JD.string)
--}
 
 
 initDataDecoder : JD.Decoder Model
@@ -417,6 +381,65 @@ initDataDecoder =
 fetchInitData : Cmd Msg
 fetchInitData =
     Http.send InitDataFetched <| Http.get initUrl initDataDecoder
+
+
+
+--(PUT "/insert" [bilag curdate debit desc amount mva]
+
+
+type alias SaveToDb =
+    { bilag : Int
+    , curdate : String
+    , debit : Int
+    , desc : String
+    , amount : Float
+    , mva : Float
+    }
+
+
+type alias JsonStatus =
+    { ok : Bool, msg : String, statuscode : Int }
+
+
+statusDecoder : JD.Decoder JsonStatus
+statusDecoder =
+    JD.succeed JsonStatus
+        |> JP.required "ok" JD.bool
+        |> JP.required "msg" JD.string
+        |> JP.required "statuscode" JD.int
+
+
+
+--saveToDb : SaveToDb -> Cmd Msg
+--saveToDb { bilag, curdate, debit, desc, amount, mva } =
+
+
+saveToDb : Cmd Msg
+saveToDb =
+    let
+        d =
+            { bilag = 1
+            , curdate = "s"
+            , debit = 2
+            , desc = "sfs"
+            , amount = 120.2
+            , mva = 12.3
+            }
+
+        params =
+            [ ( "bilag", JE.int d.bilag )
+            , ( "curdate", JE.string d.curdate )
+            , ( "debit", JE.int d.debit )
+            , ( "desc", JE.string d.desc )
+            , ( "amount", JE.float d.amount )
+            , ( "mva", JE.float d.mva )
+            ]
+
+        jbody =
+            Util.asHttpBody params
+    in
+    Http.send DataSaved <|
+        Http.post saveUrl jbody statusDecoder
 
 
 

@@ -37,7 +37,13 @@
   (memoize (fn []
     (.selectDebits ^GjFacade facade))))
 
-(comment insert-generaljournal [^GeneralJournalBean gj ^GeneralJournalBean mva]
+(defn insert-generaljournal [^GeneralJournalBean gj ^GeneralJournalBean mva]
+  (do
+    (if-not (nil? mva)
+      (.insert ^GjFacade facade mva))
+    (.insert ^GjFacade facade gj)))
+
+(comment 
   (DB/with-session :koteriku GeneralJournalMapper
     (do
       (if-not (nil? mva)
@@ -48,30 +54,26 @@
   (DB/with-session :koteriku InvoiceMapper
     (.updateVoucher it voucher invoicenum)))
 
-(defn insert [bilag curdate credit debit desc amount mva mvaamt]
+(defn insert [bilag curdate debit desc amount mva]
   (let [bilag  (U/rs bilag)
-        credit (U/rs credit)
+        ;credit (U/rs credit)
         debit  (U/rs debit)
         amount (let [tmp (U/rs amount)
                      fact (if (U/in? frac-debs debit) 0.15 1.0)]
                  (* fact tmp))
         mva    (U/rs mva)
-        mvaamt (U/rs mvaamt)
         curdate (U/str->date curdate)
-        calc-mva (cond
-                  (> mvaamt 0) mvaamt
-                  (< mva 0) 0.0
-                  (= mva 2711) (* mva_25 amount)
-                  (= mva 2713) (* mva_15 amount)
-                  (= mva 2714) (* mva_08 amount))
-        gj-bean (GeneralJournalBean. bilag curdate credit debit desc (- amount calc-mva))
-        mva-bean (if (> calc-mva 0.0)
-                   (GeneralJournalBean. bilag curdate credit mva desc calc-mva)
+        ;calc-mva (cond
+        ;          (> mvaamt 0) mvaamt
+        ;          (< mva 0) 0.0
+        ;          (= mva 2711) (* mva_25 amount)
+        ;          (= mva 2713) (* mva_15 amount)
+        ;          (= mva 2714) (* mva_08 amount))
+        gj-bean (GeneralJournalBean. bilag curdate 1902 debit desc (- amount mva))
+        mva-bean (if (> mva 0.0)
+                   (GeneralJournalBean. bilag curdate 1902 2711 desc mva)
                    nil)]
-    (LOG/info (str "Bilag: " bilag ", credit: " credit ", debit: " debit
-                ", amount: " amount ", mva: " mva ", mvaamt: " mvaamt
-                ", curdate: " curdate ", calc-mva: " calc-mva))
-    ;(insert-generaljournal gj-bean mva-bean)
+    (insert-generaljournal gj-bean mva-bean)
     gj-bean))
 
 (defn insert-invoice [bilag curdate amount invoicenum]

@@ -4,11 +4,12 @@
       GeneralJournalBean
       Ns4102Bean])
   (:use
-    [compojure.core :only (GET PUT defroutes)])
+    [compojure.core :only (GET POST defroutes)])
   (:require
     [selmer.parser :as P]
     [gj.service.htmlutils :as U]
     ;[gj.service.db :as DB]
+    [gj.service.logservice :as LOG]
     [gj.generaljournal.dbx :as DBX]
     [cheshire.core :as json]))
 
@@ -29,7 +30,7 @@
          :amount (str (.getAmount x))})
      (DBX/fetch-by-bilag)))
 
-(defn last-receipts-html []
+(comment last-receipts-html []
   (P/render-file "templates/generaljournal/gjitems.html"
     {:items (last-receipts)}))
 
@@ -55,14 +56,22 @@
   (GET "/latestdata" []
     (U/json-response 
       (general-journal)))
-  (PUT "/insert" [credit debit curdate bilag desc amount mva mvaamt]
-    (let [gj-bean (DBX/insert bilag curdate credit debit desc amount mva mvaamt)]
+  (POST "/insert" request
+    (let [jr (U/json-req-parse request)]
+      (println jr)
+      (U/json-response {:ok true :msg "Not Ok!" :statuscode 1}))))
+
+(comment
+  (PUT "/insertx" [bilag curdate debit desc amount mva]
+    (let [gj-bean (DBX/insert bilag curdate debit desc amount mva)]
       (U/json-response
          {"nextreceipt" (-> bilag read-string inc str)
-          "lastreceipts" (last-receipts-html)})))
-      ;(U/json-response {"beanId" (.getId gj-bean) "bilag" (-> bilag read-string inc str)})))
-  (PUT "/insertinvoice" [curdate bilag amount invoicenum]
+          "lastreceipts" (last-receipts)}))))
+      ;(U/json-response {"beanId" (.getId gj-bean) "bilag" (-> bilag read-string inc str)}))
+  
+(comment "/insertinvoice" [curdate bilag amount invoicenum]
     (let [gj-bean (DBX/insert-invoice bilag curdate amount invoicenum)]
       (U/json-response
          {"nextreceipt" (-> bilag read-string inc str)
-          "lastreceipts" (last-receipts-html)}))))
+          "lastreceipts" (last-receipts-html)})))
+
