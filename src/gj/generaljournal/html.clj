@@ -57,9 +57,16 @@
     (U/json-response 
       (general-journal)))
   (POST "/insert" request
-    (let [jr (U/json-req-parse request)]
+    (let [jr (U/json-req-parse request)
+          bilag (jr "bilag")
+          dx (jr "curdate")
+          debit (jr "debit")
+          desc (jr "desc")
+          amount (jr "amount")
+          mva (jr "mva")
+          upd-bean (DBX/insert bilag dx debit desc amount mva)]
       (println jr)
-      (U/json-response {:ok true :msg "Not Ok!" :statuscode 1}))))
+      (U/json-response {:ok true :msg "Ok!" :statuscode 1}))))
 
 (comment
   (PUT "/insertx" [bilag curdate debit desc amount mva]

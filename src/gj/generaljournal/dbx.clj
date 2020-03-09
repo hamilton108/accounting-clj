@@ -55,13 +55,9 @@
     (.updateVoucher it voucher invoicenum)))
 
 (defn insert [bilag curdate debit desc amount mva]
-  (let [bilag  (U/rs bilag)
-        ;credit (U/rs credit)
-        debit  (U/rs debit)
-        amount (let [tmp (U/rs amount)
+  (let [amount (let [tmp (U/rs amount)
                      fact (if (U/in? frac-debs debit) 0.15 1.0)]
                  (* fact tmp))
-        mva    (U/rs mva)
         curdate (U/str->date curdate)
         ;calc-mva (cond
         ;          (> mvaamt 0) mvaamt

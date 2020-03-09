@@ -47,10 +47,6 @@ type alias Field =
     Maybe String
 
 
-type alias NumField =
-    Maybe Float
-
-
 type Bilag
     = Bilag String
 
@@ -240,7 +236,7 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         Save ->
-            ( model, saveToDb )
+            ( model, saveToDb (asParams model) )
 
         DebitChanged s ->
             let
@@ -412,29 +408,53 @@ statusDecoder =
 
 --saveToDb : SaveToDb -> Cmd Msg
 --saveToDb { bilag, curdate, debit, desc, amount, mva } =
+{-
+   type alias Model =
+       { ns4102 : SelectItems
+       , lastBilagDate : String
+       , bilag : Bilag
+       , date : Field
+       , desc : Field
+       , belop : Field
+       , mvaAmount : Field
+       , mva : Bool
+       , selectedNs4102 : Maybe String
+       }
+-}
 
 
-saveToDb : Cmd Msg
-saveToDb =
+asParams : Model -> List ( String, JE.Value )
+asParams model =
+    [ ( "bilag", JE.int 2 )
+    , ( "curdate", JE.string "sfsdf" )
+    , ( "debit", JE.int 3 )
+    , ( "desc", JE.string "dsfsdfsf" )
+    , ( "amount", JE.float 12.2 )
+    , ( "mva", JE.float 3.34 )
+    ]
+
+
+saveToDb : List ( String, JE.Value ) -> Cmd Msg
+saveToDb params =
     let
-        d =
-            { bilag = 1
-            , curdate = "s"
-            , debit = 2
-            , desc = "sfs"
-            , amount = 120.2
-            , mva = 12.3
-            }
-
-        params =
-            [ ( "bilag", JE.int d.bilag )
-            , ( "curdate", JE.string d.curdate )
-            , ( "debit", JE.int d.debit )
-            , ( "desc", JE.string d.desc )
-            , ( "amount", JE.float d.amount )
-            , ( "mva", JE.float d.mva )
-            ]
-
+        {-
+              d =
+                  { bilag = 1
+                  , curdate = "s"
+                  , debit = 2
+                  , desc = "sfs"
+                  , amount = 120.2
+                  , mva = 12.3
+                  }
+           params =
+               [ ( "bilag", JE.int d.bilag )
+               , ( "curdate", JE.string d.curdate )
+               , ( "debit", JE.int d.debit )
+               , ( "desc", JE.string d.desc )
+               , ( "amount", JE.float d.amount )
+               , ( "mva", JE.float d.mva )
+               ]
+        -}
         jbody =
             Util.asHttpBody params
     in
