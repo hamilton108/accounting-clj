@@ -58,7 +58,7 @@ type alias IntField =
 type alias Model =
     { ns4102 : SelectItems
     , lastBilagDate : String
-    , bilag : IntField
+    , bilag : Int
     , date : Field
     , desc : Field
     , belop : FloatField
@@ -101,7 +101,7 @@ init : ( Model, Cmd Msg )
 init =
     ( { ns4102 = []
       , lastBilagDate = ""
-      , bilag = Nothing
+      , bilag = 0
       , date = Nothing
       , desc = Nothing
       , belop = Nothing
@@ -129,7 +129,7 @@ view model =
             textInput DescChanged (LabelText "Tekst") model.desc
 
         bilag =
-            numberInput BilagChanged (LabelText "Bilag") (Maybe.map String.fromInt model.bilag)
+            numberInput BilagChanged (LabelText "Bilag") (Just (String.fromInt model.bilag))
 
         belop =
             numberInput BelopChanged (LabelText "Beløp") (Maybe.map String.fromFloat model.belop)
@@ -186,7 +186,7 @@ calcMvaAmount cb belop =
         Nothing
 
     else
-        Nothing
+        Maybe.map ((*) 0.25) belop
 
 
 
@@ -252,7 +252,11 @@ update msg model =
             ( { model | desc = Just s }, Cmd.none )
 
         BilagChanged s ->
-            ( { model | bilag = String.toInt s }, Cmd.none )
+            let
+                curBilag =
+                    Maybe.withDefault 0 (String.toInt s)
+            in
+            ( { model | bilag = curBilag }, Cmd.none )
 
         BelopChanged s ->
             let
@@ -354,7 +358,7 @@ initDataDecoder =
     JD.succeed Model
         |> JP.required "ns4102" (JD.list selectItemDecoder)
         |> JP.required "bilag-dx" JD.string
-        |> JP.required "bilag" (JD.nullable JD.int)
+        |> JP.required "bilag" JD.int
         |> JP.hardcoded Nothing
         |> JP.hardcoded Nothing
         |> JP.hardcoded Nothing

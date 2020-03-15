@@ -44,7 +44,7 @@
       {;:db-url "url"
        ;:db-user "user"
        :ns4102 (map ns4102->select (DBX/fetch-ns4102))
-       :bilag (-> bilag-1 .getBilag inc str)
+       :bilag (-> bilag-1 .getBilag inc)
        :bilag-dx bilag-dx
        :last-date last-date-dx
        :items (last-receipts)}))
