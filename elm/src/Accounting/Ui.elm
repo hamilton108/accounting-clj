@@ -74,45 +74,6 @@ input event (InputType inputType) (LabelText labelText) inputValue =
         ]
 
 
-
-{-
-   checkBoxInput : msg -> LabelText -> Bool -> Html msg
-   checkBoxInput event (LabelText label) isChecked =
-       let
-           myInput =
-               if isChecked == True then
-                   H.input [ E.onClick event, A.id label, A.type_ "checkbox", A.class "form-check-input", A.attribute "checked" "checked" ] []
-
-               else
-                   H.input [ E.onClick event, A.id label, A.type_ "checkbox", A.class "form-check-input" ] []
-       in
-           H.div
-           [ A.class "form-check form-check-inline" ]
-           [ myInput
-           , H.label [ A.attribute "for" label, A.class "form-check-label" ] [ H.text label ]
-           ]
-
-
-
-      checkBoxInput : (String -> msg) -> LabelText -> GridPosition -> Bool -> Html msg
-      checkBoxInput event (LabelText label) (GridPosition gridPos) isChecked =
-          let
-              myInput =
-                  if isChecked == True then
-                      H.input [ E.onClick event, A.id label, A.type_ "checkbox", A.class "form-check-input", A.attribute "checked" "checked" ] []
-
-                  else
-                      H.input [ E.onClick event, A.id label, A.type_ "checkbox", A.class "form-check-input" ] []
-          in
-          H.div [ A.class gridPos ]
-              [ H.div [ A.class "form-check form-check-inline" ]
-                  [ myInput
-                  , H.label [ A.attribute "for" label, A.class "form-check-label" ] [ H.text label ]
-                  ]
-              ]
--}
-
-
 textInput : (String -> msg) -> LabelText -> Maybe String -> Html msg
 textInput event labelText inputValue =
     input event (InputType "text") labelText inputValue
