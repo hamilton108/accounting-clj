@@ -68,6 +68,7 @@ type alias Model =
     , mva : Bool
     , selectedNs4102 : IntField
     , myStatus : MyStatus
+    , incBilag : Bool
     }
 
 
@@ -98,6 +99,7 @@ type Msg
     | InitDataFetched (Result Http.Error Model)
     | DataSaved (Result Http.Error JsonStatus)
     | IsMva25Changed Bool
+    | IncBilagChanged Bool
 
 
 init : ( Model, Cmd Msg )
@@ -112,6 +114,7 @@ init =
       , mva = True
       , selectedNs4102 = Nothing
       , myStatus = None
+      , incBilag = True
       }
     , fetchInitData
     )
@@ -149,6 +152,14 @@ view model =
                 ]
                 "Mva 25 %"
 
+        incBilag =
+            Checkbox.checkbox
+                [ Checkbox.id "cb-inc"
+                , Checkbox.checked model.incBilag
+                , Checkbox.onCheck IncBilagChanged
+                ]
+                "Do increment bilag"
+
         btnOk =
             button Save Success "Lagre" True
 
@@ -162,7 +173,7 @@ view model =
                     , gridItem (GridPosition "e1") belop
                     , gridItem (GridPosition "a2") presets
                     , gridItem (GridPosition "b2") mvaAmount
-                    , gridItem (GridPosition "c2") isMva25
+                    , gridItem (GridPosition "c2") (H.div [] [ isMva25, incBilag ])
                     , gridItem (GridPosition "d2") btnOk
                     ]
             in
@@ -237,7 +248,15 @@ update msg model =
             ( { model | myStatus = HttpError (Util.httpErr2str err) }, Cmd.none )
 
         DataSaved (Ok jsonStatus) ->
-            ( { model | bilag = model.bilag + 1, myStatus = Oid jsonStatus.statuscode }, Cmd.none )
+            let
+                curBilag =
+                    if model.incBilag == True then
+                        model.bilag + 1
+
+                    else
+                        model.bilag
+            in
+            ( { model | bilag = curBilag, myStatus = Oid jsonStatus.statuscode }, Cmd.none )
 
         DataSaved (Err err) ->
             ( { model | myStatus = HttpError (Util.httpErr2str err) }, Cmd.none )
@@ -248,6 +267,9 @@ update msg model =
                     calcMvaAmount cb model.belop
             in
             ( { model | mva = cb, mvaAmount = curMvaAmount }, Cmd.none )
+
+        IncBilagChanged cb ->
+            ( { model | incBilag = cb }, Cmd.none )
 
 
 updatePreset : Model -> String -> Model
@@ -315,6 +337,7 @@ initDataDecoder =
         |> JP.hardcoded True
         |> JP.hardcoded Nothing
         |> JP.hardcoded None
+        |> JP.hardcoded True
 
 
 fetchInitData : Cmd Msg
@@ -353,6 +376,9 @@ saveToDb :
     -> Cmd Msg
 saveToDb model =
     let
+        mva =
+            Maybe.withDefault 0.0 model.mvaAmount
+
         params =
             model.date
                 |> Maybe.andThen
@@ -366,18 +392,14 @@ saveToDb model =
                                                 model.belop
                                                     |> Maybe.andThen
                                                         (\blp ->
-                                                            model.mvaAmount
-                                                                |> Maybe.andThen
-                                                                    (\mva ->
-                                                                        Just
-                                                                            [ ( "bilag", JE.int model.bilag )
-                                                                            , ( "curdate", JE.string dx )
-                                                                            , ( "debit", JE.int ns4102 )
-                                                                            , ( "desc", JE.string dsc )
-                                                                            , ( "amount", JE.float blp )
-                                                                            , ( "mva", JE.float mva )
-                                                                            ]
-                                                                    )
+                                                            Just
+                                                                [ ( "bilag", JE.int model.bilag )
+                                                                , ( "curdate", JE.string dx )
+                                                                , ( "debit", JE.int ns4102 )
+                                                                , ( "desc", JE.string dsc )
+                                                                , ( "amount", JE.float blp )
+                                                                , ( "mva", JE.float mva )
+                                                                ]
                                                         )
                                             )
                                 )
