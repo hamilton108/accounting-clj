@@ -59,12 +59,6 @@
                      fact (if (U/in? frac-debs debit) 0.15 1.0)]
                  (* fact tmp))
         curdate (U/str->date curdate)
-        ;calc-mva (cond
-        ;          (> mvaamt 0) mvaamt
-        ;          (< mva 0) 0.0
-        ;          (= mva 2711) (* mva_25 amount)
-        ;          (= mva 2713) (* mva_15 amount)
-        ;          (= mva 2714) (* mva_08 amount))
         gj-bean (GeneralJournalBean. bilag curdate 1902 debit desc (- amount mva))
         mva-bean (if (> mva 0.0)
                    (GeneralJournalBean. bilag curdate 1902 2711 desc mva)

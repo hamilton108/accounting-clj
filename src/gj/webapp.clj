@@ -13,6 +13,8 @@
     [ring.adapter.jetty :only (run-jetty)]
     [ring.middleware.params :only (wrap-params)]))
 
+(set! *warn-on-reflection* true)   
+
 ;(P/set-resource-path! "/home/rcs/opt/java/harborview/src/resources/")
 (P/cache-off!)
 

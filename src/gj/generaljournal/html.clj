@@ -59,9 +59,9 @@
           desc (jr "desc")
           amount (jr "amount")
           mva (jr "mva")
-          upd-bean (DBX/insert bilag dx debit desc amount mva)]
+          upd-bean ^GeneralJournalBean (DBX/insert bilag dx debit desc amount mva)]
       (println jr)
-      (U/json-response {:ok true :msg "Ok!" :statuscode 1}))))
+      (U/json-response {:ok true :msg "Ok!" :statuscode (.getId upd-bean)}))))
 
 (comment
   (PUT "/insertx" [bilag curdate debit desc amount mva]

@@ -51,6 +51,12 @@ type alias IntField =
     Maybe Int
 
 
+type MyStatus
+    = None
+    | HttpError String
+    | Oid Int
+
+
 type alias Model =
     { ns4102 : SelectItems
     , lastBilagDate : String
@@ -61,6 +67,7 @@ type alias Model =
     , mvaAmount : FloatField
     , mva : Bool
     , selectedNs4102 : IntField
+    , myStatus : MyStatus
     }
 
 
@@ -104,6 +111,7 @@ init =
       , mvaAmount = Nothing
       , mva = True
       , selectedNs4102 = Nothing
+      , myStatus = None
       }
     , fetchInitData
     )
@@ -143,37 +151,32 @@ view model =
 
         btnOk =
             button Save Success "Lagre" True
+
+        items =
+            let
+                itemsx =
+                    [ gridItem (GridPosition "a1") curdate
+                    , gridItem (GridPosition "b1") debet
+                    , gridItem (GridPosition "c1") desc
+                    , gridItem (GridPosition "d1") bilag
+                    , gridItem (GridPosition "e1") belop
+                    , gridItem (GridPosition "a2") presets
+                    , gridItem (GridPosition "b2") mvaAmount
+                    , gridItem (GridPosition "c2") isMva25
+                    , gridItem (GridPosition "d2") btnOk
+                    ]
+            in
+            case model.myStatus of
+                None ->
+                    itemsx
+
+                HttpError err ->
+                    gridItem (GridPosition "e2") (H.p [ A.class "elm-error" ] [ H.text err ]) :: itemsx
+
+                Oid oid ->
+                    gridItem (GridPosition "e2") (H.p [ A.class "elm-ok" ] [ H.text ("Saved with oid: " ++ String.fromInt oid) ]) :: itemsx
     in
-    H.div [ A.class "accounting-grid" ]
-        [ gridItem (GridPosition "a1") curdate
-        , gridItem (GridPosition "b1") debet
-        , gridItem (GridPosition "c1") desc
-        , gridItem (GridPosition "d1") bilag
-        , gridItem (GridPosition "e1") belop
-        , gridItem (GridPosition "a2") presets
-        , gridItem (GridPosition "b2") mvaAmount
-        , gridItem (GridPosition "c2") isMva25
-        , gridItem (GridPosition "d2") btnOk
-        ]
-
-
-httpErr2str : Http.Error -> String
-httpErr2str err =
-    case err of
-        Http.Timeout ->
-            "Timeout"
-
-        Http.NetworkError ->
-            "NetworkError"
-
-        Http.BadUrl s ->
-            "BadUrl: " ++ s
-
-        Http.BadStatus r ->
-            "BadStatus: "
-
-        Http.BadPayload s r ->
-            "BadPayload: " ++ s
+    H.div [ A.class "accounting-grid" ] items
 
 
 calcMvaAmount : Bool -> FloatField -> FloatField
@@ -189,9 +192,8 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         Save ->
-            ( model, Cmd.none )
+            ( model, saveToDb model )
 
-        -- saveToDb model )
         DebitChanged s ->
             ( { model | selectedNs4102 = String.toInt s }, Cmd.none )
 
@@ -232,14 +234,13 @@ update msg model =
             ( initData, Cmd.none )
 
         InitDataFetched (Err err) ->
-            ( model, Cmd.none )
+            ( { model | myStatus = HttpError (Util.httpErr2str err) }, Cmd.none )
 
         DataSaved (Ok jsonStatus) ->
-            ( model, Cmd.none )
+            ( { model | bilag = model.bilag + 1, myStatus = Oid jsonStatus.statuscode }, Cmd.none )
 
         DataSaved (Err err) ->
-            --Debug.log (httpErr2str err)
-            ( model, Cmd.none )
+            ( { model | myStatus = HttpError (Util.httpErr2str err) }, Cmd.none )
 
         IsMva25Changed cb ->
             let
@@ -313,6 +314,7 @@ initDataDecoder =
         |> JP.hardcoded Nothing
         |> JP.hardcoded True
         |> JP.hardcoded Nothing
+        |> JP.hardcoded None
 
 
 fetchInitData : Cmd Msg
@@ -341,16 +343,57 @@ statusDecoder =
 
 saveToDb :
     { r
-        | bilag : IntField
+        | bilag : Int
         , date : Field
         , selectedNs4102 : IntField
         , desc : Field
-        , belop : Field
+        , belop : FloatField
         , mvaAmount : FloatField
     }
     -> Cmd Msg
 saveToDb model =
-    Cmd.none
+    let
+        params =
+            model.date
+                |> Maybe.andThen
+                    (\dx ->
+                        model.selectedNs4102
+                            |> Maybe.andThen
+                                (\ns4102 ->
+                                    model.desc
+                                        |> Maybe.andThen
+                                            (\dsc ->
+                                                model.belop
+                                                    |> Maybe.andThen
+                                                        (\blp ->
+                                                            model.mvaAmount
+                                                                |> Maybe.andThen
+                                                                    (\mva ->
+                                                                        Just
+                                                                            [ ( "bilag", JE.int model.bilag )
+                                                                            , ( "curdate", JE.string dx )
+                                                                            , ( "debit", JE.int ns4102 )
+                                                                            , ( "desc", JE.string dsc )
+                                                                            , ( "amount", JE.float blp )
+                                                                            , ( "mva", JE.float mva )
+                                                                            ]
+                                                                    )
+                                                        )
+                                            )
+                                )
+                    )
+    in
+    case params of
+        Nothing ->
+            Cmd.none
+
+        Just params1 ->
+            let
+                jbody =
+                    Util.asHttpBody params1
+            in
+            Http.send DataSaved <|
+                Http.post saveUrl jbody statusDecoder
 
 
 
