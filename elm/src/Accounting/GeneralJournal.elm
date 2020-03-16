@@ -1,4 +1,4 @@
-module Accounting.GeneralJournal exposing (Model, Msg(..), Tx(..), init, update, view)
+module Accounting.GeneralJournal exposing (Model, Msg(..), init, update, view)
 
 import Accounting.Ui
     exposing
@@ -22,10 +22,6 @@ import Http
 import Json.Decode as JD
 import Json.Decode.Pipeline as JP
 import Json.Encode as JE
-
-
-type Tx
-    = Tx (Maybe String)
 
 
 mainUrl : String
@@ -189,42 +185,6 @@ calcMvaAmount cb belop =
         Maybe.map ((*) 0.25) belop
 
 
-
-{-
-        case belop of
-            Nothing ->
-                Nothing
-
-            Just b ->
-                let
-                    bx =
-                        Maybe.withDefault 0 (String.toFloat b)
-                in
-                Just (String.fromFloat (bx * 0.25))
-
-
-
-   stringToInt : Maybe String -> Int
-   stringToInt s =
-       case s of
-           Nothing ->
-               Nothing
-
-           Just x ->
-               Maybe.withDefault 0 (String.toInt x)
-
-
-   stringToFloat : Maybe String -> Int
-   stringToFloat s =
-       case s of
-           Nothing ->
-               Nothing
-
-           Just x ->
-               Maybe.withDefault 0 (String.toFloat x)
--}
-
-
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
@@ -266,23 +226,20 @@ update msg model =
             ( { model | belop = String.toFloat s, mvaAmount = curMvaAmount }, Cmd.none )
 
         MvaChanged s ->
-            Debug.log "update"
-                ( { model | mvaAmount = String.toFloat s }, Cmd.none )
+            ( { model | mvaAmount = String.toFloat s }, Cmd.none )
 
         InitDataFetched (Ok initData) ->
             ( initData, Cmd.none )
 
         InitDataFetched (Err err) ->
-            Debug.log (httpErr2str err)
-                ( model, Cmd.none )
+            ( model, Cmd.none )
 
         DataSaved (Ok jsonStatus) ->
-            Debug.log jsonStatus.msg
-                ( model, Cmd.none )
+            ( model, Cmd.none )
 
         DataSaved (Err err) ->
-            Debug.log (httpErr2str err)
-                ( model, Cmd.none )
+            --Debug.log (httpErr2str err)
+            ( model, Cmd.none )
 
         IsMva25Changed cb ->
             let
@@ -344,15 +301,6 @@ selectItemDecoder =
         (JD.field "t" JD.string)
 
 
-
-{-
-   bilagDecoder : JD.Decoder Bilag
-   bilagDecoder =
-       JD.map Bilag
-           JD.string
--}
-
-
 initDataDecoder : JD.Decoder Model
 initDataDecoder =
     JD.succeed Model
@@ -377,7 +325,10 @@ fetchInitData =
 
 
 type alias JsonStatus =
-    { ok : Bool, msg : String, statuscode : Int }
+    { ok : Bool
+    , msg : String
+    , statuscode : Int
+    }
 
 
 statusDecoder : JD.Decoder JsonStatus
@@ -386,35 +337,6 @@ statusDecoder =
         |> JP.required "ok" JD.bool
         |> JP.required "msg" JD.string
         |> JP.required "statuscode" JD.int
-
-
-
---saveToDb : SaveToDb -> Cmd Msg
---saveToDb { bilag, curdate, debit, desc, amount, mva } =
-{-
-   type alias Model =
-       { ns4102 : SelectItems
-       , lastBilagDate : String
-       , bilag : Bilag
-       , date : Field
-       , desc : Field
-       , belop : Field
-       , mvaAmount : Field
-       , mva : Bool
-       , selectedNs4102 : Maybe String
-       }
--}
-
-
-asParams : Model -> List ( String, JE.Value )
-asParams model =
-    [ ( "bilag", JE.int 2 )
-    , ( "curdate", JE.string "sfsdf" )
-    , ( "debit", JE.int 3 )
-    , ( "desc", JE.string "dsfsdfsf" )
-    , ( "amount", JE.float 12.2 )
-    , ( "mva", JE.float 3.34 )
-    ]
 
 
 saveToDb :

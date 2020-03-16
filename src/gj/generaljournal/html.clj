@@ -6,9 +6,7 @@
   (:use
     [compojure.core :only (GET POST defroutes)])
   (:require
-    [selmer.parser :as P]
     [gj.service.htmlutils :as U]
-    ;[gj.service.db :as DB]
     [gj.service.logservice :as LOG]
     [gj.generaljournal.dbx :as DBX]
     [cheshire.core :as json]))
@@ -30,9 +28,6 @@
          :amount (str (.getAmount x))})
      (DBX/fetch-by-bilag)))
 
-(comment last-receipts-html []
-  (P/render-file "templates/generaljournal/gjitems.html"
-    {:items (last-receipts)}))
 
 (defn general-journal []
   (let [bilag (DBX/fetch-by-bilag)

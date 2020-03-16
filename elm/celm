@@ -13,10 +13,10 @@ EOF
 }
 
 MODULE="1"
-OPTIMIZE="0"
+OPTIMIZE=0
 TMP="/home/rcs/opt/elmcommon"
 
-while getopts “hoi:” OPTION
+while getopts “ho” OPTION
 do
      case $OPTION in
          h)
@@ -24,7 +24,7 @@ do
              exit 1
              ;;
          o)
-             OTPIMIZE="1"
+             OPTIMIZE=1
              ;;
          ?)
              usage
@@ -38,18 +38,32 @@ DOCKER_IMG="rcs/elm:0.19.1"
 case $MODULE in
 
     1) ELM="src/Accounting/Main.elm"
-       JS="elm-accounting.js"
+       JS="accounting"
        TODIR="maunaloa"
         ;;
 esac
 
-if [ "$OPTIMIZE" = "1" ]; then
-    docker run --user $(id -u):$(id -g) -it --rm -v "$(pwd):/code" -v "$TMP:/tmp" -w "/code" -e "HOME=/tmp" $DOCKER_IMG make $ELM --output $JS --optimize
+
+if [[ $OPTIMIZE -eq 1 ]]; then
+    echo "OPTIMIZE"
+    elm make $ELM --output "$JS.opt.js" --optimize
 else
-    docker run --user $(id -u):$(id -g) -it --rm -v "$(pwd):/code" -v "$TMP:/tmp" -w "/code" -e "HOME=/tmp" $DOCKER_IMG make $ELM --output $JS
+    # docker run --user $(id -u):$(id -g) -it --rm -v "$(pwd):/code" -v "$TMP:/tmp" -w "/code" -e "HOME=/tmp" $DOCKER_IMG make $ELM --output $JS
+    elm make $ELM --output "$JS.js"
 fi
 
-cp $JS ../resources/public/js/$JS
+
+if [[ $OPTIMIZE -eq 1 ]]; then
+ ./uglifyjs $JS.opt.js --compress 'pure_funcs="F2,F3,F4,F5,F6,F7,F8,F9,A2,A3,A4,A5,A6,A7,A8,A9",pure_getters,keep_fargs=false,unsafe_comps,unsafe' > $JS.compress.js
+ ./uglifyjs --mangle --output=$JS.min.js $JS.compress.js
+fi
+
+if [[ $OPTIMIZE -eq 1 ]]; then
+    cp $JS.min.js ../resources/public/js/$JS.js
+else
+    cp $JS.js ../resources/public/js/$JS.js
+fi
+
 
 exit 0
 
