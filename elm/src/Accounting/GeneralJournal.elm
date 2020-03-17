@@ -22,6 +22,7 @@ import Http
 import Json.Decode as JD
 import Json.Decode.Pipeline as JP
 import Json.Encode as JE
+import Task
 
 
 mainUrl : String
@@ -53,7 +54,7 @@ type alias IntField =
 
 type MyStatus
     = None
-    | HttpError String
+    | MyError String
     | Oid Int
 
 
@@ -100,6 +101,7 @@ type Msg
     | DataSaved (Result Http.Error JsonStatus)
     | IsMva25Changed Bool
     | IncBilagChanged Bool
+    | SaveToDbParamsInvalid () --Time.Posix
 
 
 init : ( Model, Cmd Msg )
@@ -181,7 +183,7 @@ view model =
                 None ->
                     itemsx
 
-                HttpError err ->
+                MyError err ->
                     gridItem (GridPosition "e2") (H.p [ A.class "elm-error" ] [ H.text err ]) :: itemsx
 
                 Oid oid ->
@@ -245,7 +247,7 @@ update msg model =
             ( initData, Cmd.none )
 
         InitDataFetched (Err err) ->
-            ( { model | myStatus = HttpError (Util.httpErr2str err) }, Cmd.none )
+            ( { model | myStatus = MyError (Util.httpErr2str err) }, Cmd.none )
 
         DataSaved (Ok jsonStatus) ->
             let
@@ -259,7 +261,7 @@ update msg model =
             ( { model | bilag = curBilag, myStatus = Oid jsonStatus.statuscode }, Cmd.none )
 
         DataSaved (Err err) ->
-            ( { model | myStatus = HttpError (Util.httpErr2str err) }, Cmd.none )
+            ( { model | myStatus = MyError (Util.httpErr2str err) }, Cmd.none )
 
         IsMva25Changed cb ->
             let
@@ -270,6 +272,9 @@ update msg model =
 
         IncBilagChanged cb ->
             ( { model | incBilag = cb }, Cmd.none )
+
+        SaveToDbParamsInvalid t ->
+            ( { model | myStatus = MyError "SaveToDb params invalid" }, Cmd.none )
 
 
 updatePreset : Model -> String -> Model
@@ -364,6 +369,11 @@ statusDecoder =
         |> JP.required "statuscode" JD.int
 
 
+myTask : Task.Task x ()
+myTask =
+    Task.succeed ()
+
+
 saveToDb :
     { r
         | bilag : Int
@@ -407,7 +417,7 @@ saveToDb model =
     in
     case params of
         Nothing ->
-            Cmd.none
+            Task.perform SaveToDbParamsInvalid myTask
 
         Just params1 ->
             let
@@ -416,56 +426,3 @@ saveToDb model =
             in
             Http.send DataSaved <|
                 Http.post saveUrl jbody statusDecoder
-
-
-
-{-
-   let
-       (Bilag b1) =
-           model.bilag
-
-       params =
-           model.date
-               |> Maybe.andThen
-                   (\dx ->
-                       model.selectedNs4102
-                           |> Maybe.andThen
-                               (\ns4102 ->
-                                   model.desc
-                                       |> Maybe.andThen
-                                           (\de ->
-                                               model.belop
-                                                   |> Maybe.andThen
-                                                       (\be ->
-                                                           model.mvaAmount
-                                                               |> Maybe.andThen
-                                                                   (\mva ->
-                                                                       Just
-                                                                           [ ( "bilag", JE.string b1 )
-                                                                           , ( "curdate", JE.string dx )
-                                                                           , ( "debit", JE.int ns )
-                                                                           , ( "desc", JE.string "dsfsdfsf" )
-                                                                           , ( "amount", JE.float 12.2 )
-                                                                           , ( "mva", JE.float 3.34 )
-                                                                           ]
-                                                                   )
-                                                       )
-                                           )
-                               )
-                   )
-   in
-   case
-       params
-   of
-       Just params1 ->
-           let
-               jbody =
-                   Util.asHttpBody params1
-           in
-           Http.send DataSaved <|
-               Http.post saveUrl jbody statusDecoder
-
-       Nothing ->
-           Cmd.none
-
--}
