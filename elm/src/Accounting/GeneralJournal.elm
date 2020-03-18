@@ -1,4 +1,4 @@
-module Accounting.GeneralJournal exposing (Model, Msg(..), init, update, view)
+module Accounting.GeneralJournal exposing (Model, Msg(..), init, receiptRow, update, view)
 
 import Accounting.Ui
     exposing
@@ -15,6 +15,7 @@ import Accounting.Ui
         , textInput
         )
 import Bootstrap.Form.Checkbox as Checkbox
+import Bootstrap.Table as Table
 import Common.Util as Util
 import Html as H
 import Html.Attributes as A
@@ -58,6 +59,15 @@ type MyStatus
     | Oid Int
 
 
+type alias Receipt =
+    { bilag : Int
+    , date : String
+    , debit : Int
+    , text : String
+    , amount : Float
+    }
+
+
 type alias Model =
     { ns4102 : SelectItems
     , lastBilagDate : String
@@ -70,6 +80,7 @@ type alias Model =
     , selectedNs4102 : IntField
     , myStatus : MyStatus
     , incBilag : Bool
+    , lastReceipts : List Receipt
     }
 
 
@@ -117,9 +128,46 @@ init =
       , selectedNs4102 = Nothing
       , myStatus = None
       , incBilag = True
+      , lastReceipts = []
       }
     , fetchInitData
     )
+
+
+
+--receiptRow : Receipt ->
+
+
+receiptRow : Receipt -> Table.Row Msg
+receiptRow r =
+    Table.tr []
+        [ Table.td [] [ H.text (String.fromInt r.bilag) ]
+        , Table.td [] [ H.text r.date ]
+        , Table.td [] [ H.text (String.fromInt r.debit) ]
+        , Table.td [] [ H.text r.text ]
+        , Table.td [] [ H.text (String.fromFloat r.amount) ]
+        ]
+
+
+curLastReceipts : { r | lastReceipts : List Receipt } -> H.Html Msg
+curLastReceipts model =
+    let
+        rows =
+            List.map receiptRow model.lastReceipts
+    in
+    Table.table
+        { options = [ Table.striped, Table.small ]
+        , thead =
+            Table.simpleThead
+                [ Table.th [] [ H.text "Bilag" ]
+                , Table.th [] [ H.text "Dato" ]
+                , Table.th [] [ H.text "Debet" ]
+                , Table.th [] [ H.text "Tekst" ]
+                , Table.th [] [ H.text "Beløp" ]
+                ]
+        , tbody =
+            Table.tbody [] rows
+        }
 
 
 view : Model -> H.Html Msg
@@ -165,6 +213,18 @@ view model =
         btnOk =
             button Save Success "Lagre" True
 
+        lastItems =
+            curLastReceipts model
+
+        btnGridItem : String -> String -> H.Html Msg
+        btnGridItem elmClass text =
+            gridItem (GridPosition "d2")
+                (H.div [ A.class "flex" ]
+                    [ btnOk
+                    , H.p [ A.class elmClass ] [ H.text text ]
+                    ]
+                )
+
         items =
             let
                 itemsx =
@@ -176,18 +236,21 @@ view model =
                     , gridItem (GridPosition "a2") presets
                     , gridItem (GridPosition "b2") mvaAmount
                     , gridItem (GridPosition "c2") (H.div [] [ isMva25, incBilag ])
-                    , gridItem (GridPosition "d2") btnOk
+                    , gridItem (GridPosition "e2") lastItems
                     ]
             in
             case model.myStatus of
                 None ->
-                    itemsx
+                    gridItem (GridPosition "d2") btnOk
+                        :: itemsx
 
                 MyError err ->
-                    gridItem (GridPosition "e2") (H.p [ A.class "elm-error" ] [ H.text err ]) :: itemsx
+                    btnGridItem "elm-error" err
+                        :: itemsx
 
                 Oid oid ->
-                    gridItem (GridPosition "e2") (H.p [ A.class "elm-ok" ] [ H.text ("Saved with oid: " ++ String.fromInt oid) ]) :: itemsx
+                    btnGridItem "elm-ok" ("Saved with oid: " ++ String.fromInt oid)
+                        :: itemsx
     in
     H.div [ A.class "accounting-grid" ] items
 
@@ -249,7 +312,7 @@ update msg model =
         InitDataFetched (Err err) ->
             ( { model | myStatus = MyError (Util.httpErr2str err) }, Cmd.none )
 
-        DataSaved (Ok jsonStatus) ->
+        DataSaved (Ok json) ->
             let
                 curBilag =
                     if model.incBilag == True then
@@ -258,7 +321,7 @@ update msg model =
                     else
                         model.bilag
             in
-            ( { model | bilag = curBilag, myStatus = Oid jsonStatus.statuscode }, Cmd.none )
+            ( { model | bilag = curBilag, myStatus = Oid json.statuscode, lastReceipts = json.items }, Cmd.none )
 
         DataSaved (Err err) ->
             ( { model | myStatus = MyError (Util.httpErr2str err) }, Cmd.none )
@@ -273,7 +336,7 @@ update msg model =
         IncBilagChanged cb ->
             ( { model | incBilag = cb }, Cmd.none )
 
-        SaveToDbParamsInvalid t ->
+        SaveToDbParamsInvalid _ ->
             ( { model | myStatus = MyError "SaveToDb params invalid" }, Cmd.none )
 
 
@@ -329,6 +392,30 @@ selectItemDecoder =
         (JD.field "t" JD.string)
 
 
+
+{-
+   21 (defn last-receipts []
+   22   (map (fn [^GeneralJournalBean x]
+   23         {:bilag (str (.getBilag x))
+   24          :date (.getTransactionDateStr x)
+   25          :debit (str (.getDebit x))
+   26          :credit (str (.getCredit x))
+   27          :text (.getText x)
+   28          :amount (str (.getAmount x))})
+   29      (DBX/fetch-by-bilag)))
+-}
+
+
+receiptDecoder : JD.Decoder Receipt
+receiptDecoder =
+    JD.succeed Receipt
+        |> JP.required "bilag" JD.int
+        |> JP.required "date" JD.string
+        |> JP.required "debit" JD.int
+        |> JP.required "text" JD.string
+        |> JP.required "amount" JD.float
+
+
 initDataDecoder : JD.Decoder Model
 initDataDecoder =
     JD.succeed Model
@@ -343,6 +430,7 @@ initDataDecoder =
         |> JP.hardcoded Nothing
         |> JP.hardcoded None
         |> JP.hardcoded True
+        |> JP.required "items" (JD.list receiptDecoder)
 
 
 fetchInitData : Cmd Msg
@@ -358,6 +446,7 @@ type alias JsonStatus =
     { ok : Bool
     , msg : String
     , statuscode : Int
+    , items : List Receipt
     }
 
 
@@ -367,6 +456,7 @@ statusDecoder =
         |> JP.required "ok" JD.bool
         |> JP.required "msg" JD.string
         |> JP.required "statuscode" JD.int
+        |> JP.required "items" (JD.list receiptDecoder)
 
 
 myTask : Task.Task x ()

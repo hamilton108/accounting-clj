@@ -20,12 +20,11 @@
 
 (defn last-receipts []
   (map (fn [^GeneralJournalBean x]
-        {:bilag (str (.getBilag x))
+        {:bilag (.getBilag x)
          :date (.getTransactionDateStr x)
-         :debit (str (.getDebit x))
-         :credit (str (.getCredit x))
+         :debit (.getDebit x)
          :text (.getText x)
-         :amount (str (.getAmount x))})
+         :amount (.getAmount x)})
      (DBX/fetch-by-bilag)))
 
 
@@ -61,7 +60,7 @@
           mva (jr "mva")
           upd-bean ^GeneralJournalBean (DBX/insert bilag dx debit desc amount mva)]
       (println jr)
-      (U/json-response {:ok true :msg "Ok!" :statuscode (.getId upd-bean)}))))
+      (U/json-response {:ok true :msg "Ok!" :statuscode (.getId upd-bean) :items (last-receipts)}))))
 
 (comment
   (PUT "/insertx" [bilag curdate debit desc amount mva]
