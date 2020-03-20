@@ -4,6 +4,8 @@ module Accounting.Ui exposing
     , LabelText(..)
     , SelectItem
     , SelectItems
+    , bootstrapEmptySelect
+    , bootstrapSelect
     , button
     , dateInput
     , gridItem
@@ -12,6 +14,7 @@ module Accounting.Ui exposing
     , textInput
     )
 
+import Bootstrap.Form.Select as Select exposing (Item)
 import Html as H exposing (Html)
 import Html.Attributes as A
 import Html.Events as E
@@ -141,6 +144,28 @@ makeSelect event caption payload selected =
             ]
             px
         ]
+
+
+
+--bootstrapSelect : (String -> a) -> String -> List (Item )
+
+
+bootstrapSelect : (String -> msg) -> String -> List (Item msg) -> H.Html msg
+bootstrapSelect event caption items =
+    H.span [ A.class "form-group" ]
+        [ H.label []
+            [ H.text caption ]
+        , Select.select
+            [ Select.id "myselect"
+            , Select.onChange event
+            ]
+            items
+        ]
+
+
+bootstrapEmptySelect : Item msg
+bootstrapEmptySelect =
+    Select.item [ A.value "" ] [ H.text "-" ]
 
 
 type BootstrapButton

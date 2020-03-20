@@ -4,16 +4,15 @@
       HourlistBean
       HourlistGroupBean]
     [accountingrepos.mybatis
-      HourlistFacade
-      InvoiceMapper
-      HourlistMapper
-      HourlistGroupMapper])
+      HourlistFacade])
   (:require
     [gj.service.htmlutils :as U]
     [gj.service.db :as DB]))
 
 
-(defn fetch-group-sums [invoice]
+(def facade (HourlistFacade.))
+
+(comment fetch-group-sums [invoice]
   (DB/with-session :koteriku HourlistGroupMapper
     (let [result (.selectGroupBySpec it (U/rs invoice))
           sumTotalBean (HourlistGroupBean.)]
@@ -28,19 +27,18 @@
   (DB/with-session :koteriku HourlistGroupMapper
                              (.toggleGroup it oid is-active)))
 
-(defn fetch-hourlist-groups [show-inactive]
+(comment fetch-hourlist-groups [show-inactive]
   (DB/with-session :koteriku HourlistGroupMapper
     (.selectHourlistGroups it show-inactive)))
 
 (defn fetch-invoices []
-  (DB/with-session :koteriku InvoiceMapper
-    (.selectInvoices it)))
+  (.selectInvoices ^HourlistFacade facade))
 
-(defn fetch-last-5 [invoice]
+(comment fetch-last-5 [invoice]
   (DB/with-session :koteriku HourlistMapper
     (.selectLast5 it (U/rs invoice))))
 
-(defn fetch-all [invoice]
+(comment fetch-all [invoice]
   (DB/with-session :koteriku HourlistMapper
     (.selectAll it (U/rs invoice))))
 

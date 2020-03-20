@@ -156,7 +156,7 @@ curLastReceipts model =
             List.map receiptRow model.lastReceipts
     in
     Table.table
-        { options = [ Table.striped, Table.small ]
+        { options = [ Table.small ]
         , thead =
             Table.simpleThead
                 [ Table.th [] [ H.text "Bilag" ]
@@ -459,11 +459,6 @@ statusDecoder =
         |> JP.required "items" (JD.list receiptDecoder)
 
 
-myTask : Task.Task x ()
-myTask =
-    Task.succeed ()
-
-
 saveToDb :
     { r
         | bilag : Int
@@ -476,6 +471,10 @@ saveToDb :
     -> Cmd Msg
 saveToDb model =
     let
+        emptyTask : Task.Task x ()
+        emptyTask =
+            Task.succeed ()
+
         mva =
             Maybe.withDefault 0.0 model.mvaAmount
 
@@ -507,7 +506,7 @@ saveToDb model =
     in
     case params of
         Nothing ->
-            Task.perform SaveToDbParamsInvalid myTask
+            Task.perform SaveToDbParamsInvalid emptyTask
 
         Just params1 ->
             let

@@ -9,31 +9,36 @@
     [gj.service.htmlutils :as U]))
 
 
-(defn hourlistgroup->map [^HourlistGroupBean x]
+(comment hourlistgroup->map [^HourlistGroupBean x]
   {:active (if (.equals (.getActive x) "y") 1 0)
    :desc (.getDescription x)
    :oid (str (.getId x))})
 
-(defn hourlistgroup->select [^HourlistGroupBean x]
+(comment hourlistgroup->select [^HourlistGroupBean x]
   {:name (str (.getId x) " - " (.getDescription x)) :value (str (.getId x))})
 
-(defn hourlist []
-  (let [[url user] ["-" "-"]] ;(DB/dbcp :koteriku-dbcp)]
-    (P/render-file "templates/hourlist/hourlist.html"
-      {:db-url url
-       :db-user user
-       :invoices
-        (map (fn [v]
-               (let [fnr (.getInvoiceNum v)
-                     cust (.getCustomerName v)
-                     desc (.getDescription v)]
-                 {:content (str fnr " - " cust " - " desc) :value (str fnr)}))
-          (DBX/fetch-invoices))
-       :hourlistgroups
-        (map hourlistgroup->select
-          (DBX/fetch-hourlist-groups false))})))
+(comment hourlist []
+    {:invoices
+      (map (fn [v]
+              (let [fnr (.getInvoiceNum v)
+                    cust (.getCustomerName v)
+                    desc (.getDescription v)]
+                {:content (str fnr " - " cust " - " desc) :value (str fnr)}))
+        (DBX/fetch-invoices))
+      :hourlistgroups
+      (map hourlistgroup->select
+        (DBX/fetch-hourlist-groups false))})
 
-(defn overview [fnr select-fn]
+(defn hourlist []
+    {:invoices
+      (map (fn [v]
+              (let [fnr (.getInvoiceNum v)
+                    cust (.getCustomerName v)
+                    desc (.getDescription v)]
+                {:t (str fnr " - " cust " - " desc) :v (str fnr)}))
+        (DBX/fetch-invoices))})
+
+(comment overview [fnr select-fn]
   (P/render-file "templates/hourlist/hourlistitems.html"
     {:items
      (map (fn [^HourlistBean x]
@@ -48,13 +53,13 @@
       (select-fn fnr))}))
 
 
-(defn overview-groups [show-inactive]
+(comment overview-groups [show-inactive]
   (P/render-file "templates/hourlist/groupitems.html"
      {:hourlistgroups
       (map hourlistgroup->map
        (DBX/fetch-hourlist-groups show-inactive))}))
 
-(defn groupsums [fnr]
+(comment groupsums [fnr]
   (P/render-file "templates/hourlist/groupsums.html"
     {:hourlistsums
       (map (fn [^HourlistGroupBean x]
@@ -63,10 +68,12 @@
         (DBX/fetch-group-sums fnr))}))
 
 (defroutes my-routes
-  (GET "/" request (hourlist))
-  (GET "/groupsums" [fnr] (groupsums fnr))
-  (GET "/overview" [fnr] (overview fnr DBX/fetch-all))
-  (GET "/hourlistgroups" [showinactive] (overview-groups (U/str->bool showinactive)))
+  (GET "/latestdata" []
+    (U/json-response 
+      (hourlist)))
+  (comment "/groupsums" [fnr] (groupsums fnr))
+  (comment "/overview" [fnr] (overview fnr DBX/fetch-all))
+  (comment "/hourlistgroups" [showinactive] (overview-groups (U/str->bool showinactive)))
   (comment PUT "/togglegroup" [oid isactive]
                       (do
                         (DBX/toggle-group-isactive (U/rs oid) isactive)
