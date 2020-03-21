@@ -471,10 +471,6 @@ saveToDb :
     -> Cmd Msg
 saveToDb model =
     let
-        emptyTask : Task.Task x ()
-        emptyTask =
-            Task.succeed ()
-
         mva =
             Maybe.withDefault 0.0 model.mvaAmount
 
@@ -506,8 +502,9 @@ saveToDb model =
     in
     case params of
         Nothing ->
-            Task.perform SaveToDbParamsInvalid emptyTask
+            Task.perform SaveToDbParamsInvalid (Task.succeed ())
 
+        -- emptyTask
         Just params1 ->
             let
                 jbody =

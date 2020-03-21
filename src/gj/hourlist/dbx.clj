@@ -27,9 +27,8 @@
   (DB/with-session :koteriku HourlistGroupMapper
                              (.toggleGroup it oid is-active)))
 
-(comment fetch-hourlist-groups [show-inactive]
-  (DB/with-session :koteriku HourlistGroupMapper
-    (.selectHourlistGroups it show-inactive)))
+(defn fetch-hourlist-groups [show-inactive]
+  (.selectHourlistGroups ^HourlistFacade facade show-inactive))
 
 (defn fetch-invoices []
   (.selectInvoices ^HourlistFacade facade))

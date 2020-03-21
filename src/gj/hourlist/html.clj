@@ -14,22 +14,22 @@
    :desc (.getDescription x)
    :oid (str (.getId x))})
 
-(comment hourlistgroup->select [^HourlistGroupBean x]
-  {:name (str (.getId x) " - " (.getDescription x)) :value (str (.getId x))})
+(defn hourlistgroup->select [^HourlistGroupBean x]
+  {:t (str (.getId x) " - " (.getDescription x)) :v (str (.getId x))})
 
-(comment hourlist []
+(defn hourlist []
     {:invoices
       (map (fn [v]
               (let [fnr (.getInvoiceNum v)
                     cust (.getCustomerName v)
                     desc (.getDescription v)]
-                {:content (str fnr " - " cust " - " desc) :value (str fnr)}))
+                {:t (str fnr " - " cust " - " desc) :v (str fnr)}))
         (DBX/fetch-invoices))
       :hourlistgroups
       (map hourlistgroup->select
         (DBX/fetch-hourlist-groups false))})
 
-(defn hourlist []
+(comment hourlist []
     {:invoices
       (map (fn [v]
               (let [fnr (.getInvoiceNum v)

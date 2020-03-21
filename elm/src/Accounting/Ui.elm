@@ -4,17 +4,15 @@ module Accounting.Ui exposing
     , LabelText(..)
     , SelectItem
     , SelectItems
-    , bootstrapEmptySelect
-    , bootstrapSelect
     , button
     , dateInput
     , gridItem
     , makeSelect
     , numberInput
     , textInput
+    , timeInput
     )
 
-import Bootstrap.Form.Select as Select exposing (Item)
 import Html as H exposing (Html)
 import Html.Attributes as A
 import Html.Events as E
@@ -54,12 +52,21 @@ gridItem (GridPosition clazz) item =
 -}
 
 
-input : (String -> msg) -> InputType -> LabelText -> Maybe String -> Html msg
-input event (InputType inputType) (LabelText labelText) inputValue =
+formGroup : LabelText -> H.Html msg -> H.Html msg
+formGroup (LabelText labelText) myInput =
     let
         myLabel =
             H.label [] [ H.text labelText ]
+    in
+    H.div [ A.class "form-group" ]
+        [ myLabel
+        , myInput
+        ]
 
+
+input : (String -> msg) -> InputType -> LabelText -> Maybe String -> Html msg
+input event (InputType inputType) labelText inputValue =
+    let
         myVal =
             case inputValue of
                 Nothing ->
@@ -71,10 +78,7 @@ input event (InputType inputType) (LabelText labelText) inputValue =
         myInput =
             H.input [ A.type_ inputType, A.class "form-control", E.onInput event, A.value myVal ] []
     in
-    H.div [ A.class "form-group" ]
-        [ myLabel
-        , myInput
-        ]
+    formGroup labelText myInput
 
 
 textInput : (String -> msg) -> LabelText -> Maybe String -> Html msg
@@ -90,6 +94,23 @@ numberInput event labelText inputValue =
 dateInput : (String -> msg) -> LabelText -> Maybe String -> Html msg
 dateInput event labelText inputValue =
     input event (InputType "date") labelText inputValue
+
+
+timeInput : (String -> msg) -> LabelText -> Maybe String -> Html msg
+timeInput event labelText inputValue =
+    let
+        myVal =
+            case inputValue of
+                Nothing ->
+                    ""
+
+                Just val ->
+                    val
+
+        myInput =
+            H.input [ A.type_ "time", A.step "300", A.class "form-control", E.onInput event, A.value myVal ] []
+    in
+    formGroup labelText myInput
 
 
 type alias SelectItem =
@@ -147,25 +168,63 @@ makeSelect event caption payload selected =
 
 
 
---bootstrapSelect : (String -> a) -> String -> List (Item )
+{-
+   bootstrapSelect : (String -> msg) -> String -> List (Item msg) -> H.Html msg
+   bootstrapSelect event caption items =
+       H.span [ A.class "form-group" ]
+           [ H.label []
+               [ H.text caption ]
+           , Select.select
+               [ Select.id "myselect"
+               , Select.onChange event
+               ]
+               items
+           ]
 
 
-bootstrapSelect : (String -> msg) -> String -> List (Item msg) -> H.Html msg
-bootstrapSelect event caption items =
-    H.span [ A.class "form-group" ]
-        [ H.label []
-            [ H.text caption ]
-        , Select.select
-            [ Select.id "myselect"
-            , Select.onChange event
-            ]
-            items
-        ]
+   bootstrapEmptySelect : Item msg
+   bootstrapEmptySelect =
+       Select.item [ A.value "" ] [ H.text "-" ]
 
 
-bootstrapEmptySelect : Item msg
-bootstrapEmptySelect =
-    Select.item [ A.value "" ] [ H.text "-" ]
+   type BootstrapInputType
+       = Text
+       | Date
+
+
+   type alias BootstrapFn msg =
+       List (Option msg) -> H.Html msg
+
+
+   bootstrapInput : String -> BootstrapFn msg -> List (Option msg) -> H.Html msg
+   bootstrapInput caption fn opts =
+       H.span [ A.class "form-group" ]
+           [ H.label []
+               [ H.text caption ]
+           , fn opts
+           ]
+
+
+   bootstrapDate : String -> H.Html msg
+   bootstrapDate caption =
+       bootstrapInput caption Input.date []
+
+
+   bootstrapText : String -> H.Html msg
+   bootstrapText caption =
+       bootstrapInput caption Input.text []
+
+
+   bootstrapTime : String -> H.Html msg
+   bootstrapTime caption =
+       bootstrapInput caption Input.time []
+
+
+   bootstrapNumber : String -> H.Html msg
+   bootstrapNumber caption =
+       bootstrapInput caption Input.number [ Input.attrs [ A.step "300" ] ]
+
+-}
 
 
 type BootstrapButton
@@ -200,10 +259,10 @@ buttonClass b =
 
 
 button :
-    a
+    msg
     -> BootstrapButton
     -> String
     -> Bool
-    -> VD.Node a
+    -> VD.Node msg
 button clickEvent b caption isEnabled =
     H.button [ A.class (buttonClass b), E.onClick clickEvent, A.type_ "button", A.disabled (not isEnabled) ] [ H.text caption ]
