@@ -42,6 +42,7 @@ type alias Model =
     , fromHour : String
     , toHour : String
     , hours : Maybe Float
+    , negativeHours : Maybe Float
     }
 
 
@@ -65,7 +66,8 @@ init =
       , dato = Nothing
       , fromHour = "08:00"
       , toHour = "16:00"
-      , hours = Nothing
+      , hours = Just 7.5
+      , negativeHours = Just 0.5
       }
     , fetchInitData
     )
@@ -95,6 +97,9 @@ view model =
         hours =
             numberInput HoursChanged (LabelText "Timer") (Maybe.map String.fromFloat model.hours)
 
+        neghours =
+            numberInput HoursChanged (LabelText "Pause") (Maybe.map String.fromFloat model.negativeHours)
+
         btnOk =
             button Save Success "Lagre" True
 
@@ -105,7 +110,8 @@ view model =
             , gridItem (GridPosition "d1") fromHour
             , gridItem (GridPosition "e1") toHour
             , gridItem (GridPosition "a2") hours
-            , gridItem (GridPosition "b2") btnOk
+            , gridItem (GridPosition "b2") neghours
+            , gridItem (GridPosition "c2") btnOk
             ]
     in
     H.div [ A.class "accounting-grid" ] items

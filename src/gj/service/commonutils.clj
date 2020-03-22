@@ -1,4 +1,4 @@
-(ns harborview.service.commonutils
+(ns gj.service.commonutils
   (:import
     [java.time LocalDate LocalTime]))
 

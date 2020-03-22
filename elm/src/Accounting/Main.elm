@@ -62,7 +62,7 @@ view model =
     in
     { title = "Accounting SPA"
     , body =
-        [ viewHeader model.page, content, viewFooter ]
+        [ viewHeader model.page, content ]
     }
 
 
