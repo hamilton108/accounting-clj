@@ -298,10 +298,13 @@ update msg model =
 
         BelopChanged s ->
             let
+                newBelop =
+                    String.toFloat s
+
                 curMvaAmount =
-                    calcMvaAmount model.mva model.belop
+                    calcMvaAmount model.mva newBelop
             in
-            ( { model | belop = String.toFloat s, mvaAmount = curMvaAmount }, Cmd.none )
+            ( { model | belop = newBelop, mvaAmount = curMvaAmount }, Cmd.none )
 
         MvaChanged s ->
             ( { model | mvaAmount = String.toFloat s }, Cmd.none )

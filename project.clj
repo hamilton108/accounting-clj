@@ -17,7 +17,7 @@
 		;"/home/rcs/opt/java/accounting-repos/build/libs/accounting-repos-1.0.jar"
         "resources"]
   :main ^:skip-aot gj.webapp 
-  :manifest {"Class-Path" "accounting-repos-1.0.jar"}
+  ;:manifest {"Class-Path" "accounting-repos-1.0.jar"}
   :target-path "target/%s"
   :plugins [[lein-ring "0.12.5"]]
   :profiles {:uberjar {:aot :all}})
