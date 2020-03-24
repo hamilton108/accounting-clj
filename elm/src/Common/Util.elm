@@ -58,10 +58,10 @@ httpErr2str err =
             "BadUrl: " ++ s
 
         Http.BadStatus r ->
-            "BadStatus: "
+            "Server Error: " ++ r.body
 
         Http.BadPayload s r ->
-            "BadPayload: " ++ s
+            "BadPayload: " ++ s ++ ", " ++ r.body
 
 
 

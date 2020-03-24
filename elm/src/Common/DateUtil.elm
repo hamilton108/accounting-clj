@@ -1,34 +1,22 @@
-module Common.DateUtil exposing
-    ( UnixTime
-    , dateRangeOf
-    , day_
-    , unixTimeStr
-    )
+module Common.DateUtil exposing (todayISO8601)
 
-import Common.Utils as U
-import Time
+import Task exposing (Task)
+import Time exposing (Posix)
 
 
-type alias UnixTime =
-    Int
-
-
-day_ : UnixTime
-day_ =
-    86400000
-
-
-dateRangeOf : UnixTime -> List UnixTime -> ( UnixTime, UnixTime )
-dateRangeOf dx lx =
+todayISO8601 : Posix -> String
+todayISO8601 curTime =
     let
-        offsetHi =
-            List.head lx |> Maybe.withDefault 0
+        y =
+            String.fromInt <| Time.toYear Time.utc curTime
 
-        offsetLow =
-            U.lastElem lx |> Maybe.withDefault 0
+        m =
+            monthStr <| Time.toMonth Time.utc curTime
+
+        d =
+            String.fromInt <| Time.toDay Time.utc curTime
     in
-    -- ( dxOf dx offsetLow, dxOf dx offsetHi )
-    ( dx + (offsetLow * day_), dx + (offsetHi * day_) )
+    y ++ "-" ++ m ++ "-" ++ d
 
 
 monthStr : Time.Month -> String
@@ -71,69 +59,134 @@ monthStr month =
             "12"
 
 
-unixTimeStr : UnixTime -> String
-unixTimeStr tm =
-    let
-        pt =
-            Time.millisToPosix tm
 
-        y =
-            String.fromInt <| Time.toYear Time.utc pt
-
-        mo =
-            monthStr <| Time.toMonth Time.utc pt
-
-        d =
-            String.fromInt <| Time.toDay Time.utc pt
-
-        h =
-            String.fromInt <| Time.toHour Time.utc pt
-
-        mi =
-            String.fromInt <| Time.toMinute Time.utc pt
-    in
-    y ++ "-" ++ mo ++ "-" ++ d ++ " " ++ h ++ ":" ++ mi
-
-
-
+--Task.succeed (String.fromInt year)
 {-
-   day_ : Time
+
+   type alias UnixTime =
+       Int
+
+
+   day_ : UnixTime
    day_ =
        86400000
 
 
-   week_ : Time
-   week_ =
-       604800000
-
-
-   toDate : String -> Date
-   toDate s =
-       Date.fromString s |> Result.withDefault (Date.fromTime 0)
-
-
-   addDays : Date -> Time -> Date
-   addDays dx days =
+   dateRangeOf : UnixTime -> List UnixTime -> ( UnixTime, UnixTime )
+   dateRangeOf dx lx =
        let
-           x =
-               toTime dx
+           offsetHi =
+               List.head lx |> Maybe.withDefault 0
 
-           tx =
-               x + (days * day_)
+           offsetLow =
+               U.lastElem lx |> Maybe.withDefault 0
        in
-       fromTime tx
+       -- ( dxOf dx offsetLow, dxOf dx offsetHi )
+       ( dx + (offsetLow * day_), dx + (offsetHi * day_) )
 
 
-   addWeeks : Date -> Time -> Date
-   addWeeks dx weeks =
+   monthStr : Time.Month -> String
+   monthStr month =
+       case month of
+           Time.Jan ->
+               "01"
+
+           Time.Feb ->
+               "02"
+
+           Time.Mar ->
+               "03"
+
+           Time.Apr ->
+               "04"
+
+           Time.May ->
+               "05"
+
+           Time.Jun ->
+               "06"
+
+           Time.Jul ->
+               "07"
+
+           Time.Aug ->
+               "08"
+
+           Time.Sep ->
+               "09"
+
+           Time.Oct ->
+               "10"
+
+           Time.Nov ->
+               "11"
+
+           Time.Dec ->
+               "12"
+
+
+   unixTimeStr : UnixTime -> String
+   unixTimeStr tm =
        let
-           x =
-               toTime dx
+           pt =
+               Time.millisToPosix tm
 
-           tx =
-               x + (weeks * week_)
+           y =
+               String.fromInt <| Time.toYear Time.utc pt
+
+           mo =
+               monthStr <| Time.toMonth Time.utc pt
+
+           d =
+               String.fromInt <| Time.toDay Time.utc pt
+
+           h =
+               String.fromInt <| Time.toHour Time.utc pt
+
+           mi =
+               String.fromInt <| Time.toMinute Time.utc pt
        in
-       fromTime tx
+       y ++ "-" ++ mo ++ "-" ++ d ++ " " ++ h ++ ":" ++ mi
+
+
+
+      day_ : Time
+      day_ =
+          86400000
+
+
+      week_ : Time
+      week_ =
+          604800000
+
+
+      toDate : String -> Date
+      toDate s =
+          Date.fromString s |> Result.withDefault (Date.fromTime 0)
+
+
+      addDays : Date -> Time -> Date
+      addDays dx days =
+          let
+              x =
+                  toTime dx
+
+              tx =
+                  x + (days * day_)
+          in
+          fromTime tx
+
+
+      addWeeks : Date -> Time -> Date
+      addWeeks dx weeks =
+          let
+              x =
+                  toTime dx
+
+              tx =
+                  x + (weeks * week_)
+          in
+          fromTime tx
 -}
 {- d0 : earlier date
 

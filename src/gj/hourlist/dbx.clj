@@ -33,16 +33,15 @@
 (defn fetch-invoices []
   (.selectInvoices ^HourlistFacade facade))
 
-(comment fetch-last-5 [invoice]
-  (DB/with-session :koteriku HourlistMapper
-    (.selectLast5 it (U/rs invoice))))
+(defn fetch-last-5 [invoice]
+  (.selectLast5 facade invoice))
 
 (comment fetch-all [invoice]
   (DB/with-session :koteriku HourlistMapper
     (.selectAll it (U/rs invoice))))
 
 
-(comment update-hourlist [fnr group curdate from_time to_time hours oid]
+(defn update-hourlist [fnr group curdate from_time to_time hours oid]
   (let [hb (HourlistBean.)]
     (doto hb
       (.setInvoiceNr (Integer. fnr))
@@ -51,12 +50,11 @@
       (.setFromTime from_time)
       (.setToTime to_time)
       (.setHours (Double. hours)))
-    (DB/with-session :koteriku HourlistMapper
-      (if (nil? oid)
-        (.insertHourlist it hb)
-        (do
-          (.setOid hb (U/rs oid))
-          (.updateHourlist it hb))))))
+    (if (nil? oid)
+      (.insertHourlist facade hb)
+      (do
+        (.setOid hb oid)
+        (.updateHourlist facade hb)))))
 
 (comment insert-hourlist-group [name]
   (let [hb (HourlistGroupBean.)]

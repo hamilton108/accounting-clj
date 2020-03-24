@@ -15,12 +15,16 @@ import Accounting.Ui
         , numberInput
         , timeInput
         )
+import Common.DateUtil as DateUtil
 import Common.Util as Util
 import Html as H
 import Html.Attributes as A
 import Http
 import Json.Decode as JD
 import Json.Decode.Pipeline as JP
+import Json.Encode as JE
+import Task
+import Time
 
 
 mainUrl : String
@@ -31,6 +35,10 @@ mainUrl =
 initUrl : String
 initUrl =
     mainUrl ++ "/latestdata"
+
+
+saveUrl =
+    mainUrl ++ "/insert"
 
 
 type alias Model =
@@ -54,7 +62,10 @@ type Msg
     | ToHourChanged String
     | HoursChanged String
     | InitDataFetched (Result Http.Error InitData)
+    | SetTodayDate Time.Posix
     | Save
+    | DataSaved (Result Http.Error JsonStatus)
+    | SaveToDbParamsInvalid ()
 
 
 init : ( Model, Cmd Msg )
@@ -69,8 +80,24 @@ init =
       , hours = Just 7.5
       , negativeHours = Just 0.5
       }
-    , fetchInitData
+    , Cmd.batch [ setTodayDate, fetchInitData ]
     )
+
+
+type alias JsonStatus =
+    { ok : Bool
+    , msg : String
+
+    --, statuscode : Int
+    --, items : List Receipt
+    }
+
+
+statusDecoder : JD.Decoder JsonStatus
+statusDecoder =
+    JD.succeed JsonStatus
+        |> JP.required "ok" JD.bool
+        |> JP.required "msg" JD.string
 
 
 view : Model -> H.Html Msg
@@ -146,8 +173,23 @@ update msg model =
             Debug.log (Util.httpErr2str err)
                 ( model, Cmd.none )
 
+        SetTodayDate tm ->
+            ( { model | dato = Just <| DateUtil.todayISO8601 tm }, Cmd.none )
+
         Save ->
-            ( model, Cmd.none )
+            ( model, saveToDb model )
+
+        DataSaved (Ok status) ->
+            Debug.log "DataSaved"
+                ( model, Cmd.none )
+
+        DataSaved (Err err) ->
+            Debug.log (Util.httpErr2str err)
+                ( model, Cmd.none )
+
+        SaveToDbParamsInvalid _ ->
+            Debug.log "SaveToDbParamsInvalid"
+                ( model, Cmd.none )
 
 
 selectItemDecoder : JD.Decoder SelectItem
@@ -173,3 +215,75 @@ initDataDecoder =
 fetchInitData : Cmd Msg
 fetchInitData =
     Http.send InitDataFetched <| Http.get initUrl initDataDecoder
+
+
+setTodayDate : Cmd Msg
+setTodayDate =
+    Task.perform SetTodayDate Time.now
+
+
+saveToDb :
+    { r
+        | invoice : Maybe Int
+        , hourlistGroup : Maybe Int
+        , dato : Maybe String
+        , fromHour : String
+        , toHour : String
+        , hours : Maybe Float
+    }
+    -> Cmd Msg
+saveToDb model =
+    let
+        params =
+            model.invoice
+                |> Maybe.andThen
+                    (\invoice1 ->
+                        model.hourlistGroup
+                            |> Maybe.andThen
+                                (\hourlistGroup1 ->
+                                    model.dato
+                                        |> Maybe.andThen
+                                            (\dato1 ->
+                                                model.hours
+                                                    |> Maybe.andThen
+                                                        (\hours1 ->
+                                                            Just
+                                                                [ ( "fnr", JE.int invoice1 )
+                                                                , ( "group", JE.int hourlistGroup1 )
+                                                                , ( "curdate", JE.string dato1 )
+                                                                , ( "fromtime", JE.string model.fromHour )
+                                                                , ( "totime", JE.string model.toHour )
+                                                                , ( "hours", JE.float hours1 )
+                                                                ]
+                                                        )
+                                            )
+                                )
+                    )
+    in
+    case params of
+        Nothing ->
+            Task.perform SaveToDbParamsInvalid (Task.succeed ())
+
+        Just params1 ->
+            let
+                jbody =
+                    Util.asHttpBody params1
+            in
+            Http.send DataSaved <|
+                Http.post saveUrl jbody statusDecoder
+
+
+
+{-
+   type alias Model =
+       { invoices : List SelectItem
+       , invoice : Maybe Int
+       , hourlistGroups : List SelectItem
+       , hourlistGroup : Maybe Int
+       , dato : Maybe String
+       , fromHour : String
+       , toHour : String
+       , hours : Maybe Float
+       , negativeHours : Maybe Float
+       }
+-}
