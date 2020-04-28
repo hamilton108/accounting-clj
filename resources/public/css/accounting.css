@@ -1,23 +1,18 @@
-
 .elm-error, .elm-ok {
   background-color: #FFFAF0;
   font-family: "Roboto","Helvetica Neue","Helvetica",Helvetica,Arial,sans-serif;
-  font-size: 1.2em; 
-  margin-left: 1.0rem;
-}
+  font-size: 1.2em;
+  margin-left: 1.0rem; }
 
 .elm-error {
-  color: #f00;
-}
+  color: #f00; }
 
 .elm-ok {
-  color: #0b0;
-}
+  color: #0b0; }
 
 .flex {
   display: flex;
-  flex-direction: row;
-}
+  flex-direction: row; }
 
 .accounting-grid {
   display: grid;
@@ -63,3 +58,61 @@
 .e2 {
   grid-row: 5;
   grid-column: 3; }
+
+.fake-input {
+  float: left;
+  width: 20px;
+  height: 20px;
+  border: 1px solid #9f9f9f;
+  background: #fff;
+  vertical-align: middle;
+  position: relative;
+  margin-right: 10px;
+  margin-left: 10px;
+  border-radius: 4px; }
+
+/*input[type="checkbox"] {*/
+.fake-cb {
+  position: fixed;
+  top: -9999px;
+  left: -9999px; }
+
+/*input[type="checkbox"]:checked + .fake-input:before {*/
+.fake-cb:checked + .fake-input:before {
+  content: "\2713";
+  position: absolute;
+  color: #000;
+  text-align: center;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0; }
+
+.modalDialog {
+  position: fixed;
+  font-family: Arial, Helvetica, sans-serif;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background: rgba(100, 0, 0, 0.2);
+  z-index: 99999;
+  opacity: 0;
+  pointer-events: none; }
+
+.modalDialog:target {
+  opacity: 1;
+  pointer-events: auto; }
+
+.modalDialog > div {
+  width: 30rem;
+  position: relative;
+  margin: 10% auto;
+  padding: 3rem;
+  border-radius: 10px;
+  background: #fff;
+  background: -moz-linear-gradient(#fff, #999);
+  background: -webkit-linear-gradient(#fff, #999);
+  background: -o-linear-gradient(#fff, #999); }
+
+/*# sourceMappingURL=accounting.css.map */

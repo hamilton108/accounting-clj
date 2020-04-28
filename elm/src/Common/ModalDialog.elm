@@ -1,11 +1,17 @@
-module Common.ModalDialog exposing (..)
+module Common.ModalDialog exposing
+    ( AlertCategory(..)
+    , Alertable
+    , DialogState(..)
+    , alert
+    , errorAlert
+    , modalDialog
+    )
 
-import VirtualDom as VD
-import Http
+import Common.Html as W
 import Html as H
 import Html.Attributes as A
 import Html.Events as E
-import Common.Html as W
+import Http
 
 
 type AlertCategory
@@ -56,13 +62,13 @@ modalDialog title dialogState ok cancel content =
         ( opc, ptre ) =
             dialogStatePrm dialogState
     in
-        H.div [ A.class "modalDialog", A.style "opacity" opc, A.style "pointer-events" ptre ]
-            [ H.div []
-                (titleDiv
-                    :: content
-                    ++ buttons
-                )
-            ]
+    H.div [ A.class "modalDialog", A.style "opacity" opc, A.style "pointer-events" ptre ]
+        [ H.div []
+            (titleDiv
+                :: content
+                ++ buttons
+            )
+        ]
 
 
 
@@ -105,10 +111,10 @@ alert state ok =
                 content =
                     H.div [] [ H.p [] [ H.text msg ] ]
             in
-                H.div [ A.class "modalDialog", A.style "opacity" "1", A.style "pointer-events" "auto" ]
-                    [ H.div []
-                        [ titleDiv, content, okButton ]
-                    ]
+            H.div [ A.class "modalDialog", A.style "opacity" "1", A.style "pointer-events" "auto" ]
+                [ H.div []
+                    [ titleDiv, content, okButton ]
+                ]
 
         _ ->
             H.div [ A.class "modalDialog", A.style "opacity" "0", A.style "pointer-events" "none" ]
@@ -123,6 +129,6 @@ errorAlert : String -> String -> Http.Error -> Alertable a -> Alertable a
 errorAlert title errMsg httpErr model =
     let
         errStr =
-            errMsg ++ (W.httpErr2str httpErr)
+            errMsg ++ W.httpErr2str httpErr
     in
-        { model | dlgAlert = DialogVisibleAlert title errStr Error }
+    { model | dlgAlert = DialogVisibleAlert title errStr Error }

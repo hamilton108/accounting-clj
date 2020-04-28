@@ -1,10 +1,9 @@
 (ns gj.hourlist.html
   (:import
-    [accountingrepos.dto HourlistBean HourlistGroupBean])
-  (:use
-    [compojure.core :only (GET POST defroutes)])
+    [accountingrepos.dto HourlistGroupBean])
   (:require
-    [selmer.parser :as P]
+    ;[selmer.parser :as P]
+    [compojure.core :refer (GET POST defroutes)]
     [gj.hourlist.dbx :as DBX]
     [gj.service.htmlutils :as U]))
 
@@ -40,7 +39,13 @@
           hours (jr "hours")]
       (println jr)
       (DBX/update-hourlist fnr group curdate fromtime totime hours nil)
-      (U/json-response {:ok true :msg "Ok!"}))))
+      (U/json-response {:ok true :msg "Ok!" :oid -1})))
+  (POST "/newgroup" request 
+    (let [jr (U/json-req-parse request)
+          group (jr "name")]
+      (println jr)
+      (let [newGroupBean (DBX/insert-hourlist-group group)]
+        (U/json-response {:ok true :msg "Ok!" :oid (.getId newGroupBean)})))))
 
       ;(U/json-response (DBX/fetch-last-5 fnr)))))
 

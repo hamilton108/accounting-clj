@@ -13,9 +13,11 @@ import Accounting.Ui
         , gridItem
         , makeSelect
         , numberInput
+        , textInput
         , timeInput
         )
 import Common.DateUtil as DateUtil
+import Common.ModalDialog as DLG
 import Common.Util as Util
 import Html as H
 import Html.Attributes as A
@@ -37,8 +39,14 @@ initUrl =
     mainUrl ++ "/latestdata"
 
 
+saveUrl : String
 saveUrl =
     mainUrl ++ "/insert"
+
+
+saveNewGroupUrl : String
+saveNewGroupUrl =
+    mainUrl ++ "/newgroup"
 
 
 type alias Model =
@@ -46,12 +54,21 @@ type alias Model =
     , invoice : Maybe Int
     , hourlistGroups : List SelectItem
     , hourlistGroup : Maybe Int
+    , newHourlistGroup : Maybe String
     , dato : Maybe String
     , fromHour : String
     , toHour : String
     , hours : Maybe Float
     , negativeHours : Maybe Float
+    , myStatus : MyStatus
+    , dlgNewGroup : DLG.DialogState
     }
+
+
+type MyStatus
+    = None
+    | MyError String
+    | MySuccess String
 
 
 type Msg
@@ -66,6 +83,11 @@ type Msg
     | Save
     | DataSaved (Result Http.Error JsonStatus)
     | SaveToDbParamsInvalid ()
+    | NewGroupChanged String
+    | NewGroupDialog
+    | NewGroupOk
+    | NewGroupCancel
+    | NewGroupSaved (Result Http.Error JsonStatus)
 
 
 init : ( Model, Cmd Msg )
@@ -74,11 +96,14 @@ init =
       , invoice = Nothing
       , hourlistGroups = []
       , hourlistGroup = Nothing
+      , newHourlistGroup = Nothing
       , dato = Nothing
       , fromHour = "08:00"
       , toHour = "16:00"
       , hours = Just 7.5
       , negativeHours = Just 0.5
+      , myStatus = None
+      , dlgNewGroup = DLG.DialogHidden
       }
     , Cmd.batch [ setTodayDate, fetchInitData ]
     )
@@ -87,6 +112,7 @@ init =
 type alias JsonStatus =
     { ok : Bool
     , msg : String
+    , oid : Int
 
     --, statuscode : Int
     --, items : List Receipt
@@ -98,6 +124,7 @@ statusDecoder =
     JD.succeed JsonStatus
         |> JP.required "ok" JD.bool
         |> JP.required "msg" JD.string
+        |> JP.required "oid" JD.int
 
 
 view : Model -> H.Html Msg
@@ -130,26 +157,65 @@ view model =
         btnOk =
             button Save Success "Lagre" True
 
+        btnNewGroup =
+            button NewGroupDialog Success "Ny gruppe" True
+
+        newGroupInput =
+            textInput NewGroupChanged (LabelText "Timelistegruppe") model.newHourlistGroup
+
+        btnGridItem : String -> String -> H.Html Msg
+        btnGridItem elmClass text =
+            gridItem (GridPosition "c2")
+                (H.div [ A.class "flex" ]
+                    [ btnOk
+                    , H.p [ A.class elmClass ] [ H.text text ]
+                    ]
+                )
+
         items =
-            [ gridItem (GridPosition "a1") inv
-            , gridItem (GridPosition "b1") hlg
-            , gridItem (GridPosition "c1") dx
-            , gridItem (GridPosition "d1") fromHour
-            , gridItem (GridPosition "e1") toHour
-            , gridItem (GridPosition "a2") hours
-            , gridItem (GridPosition "b2") neghours
-            , gridItem (GridPosition "c2") btnOk
-            ]
+            let
+                itemsx =
+                    [ gridItem (GridPosition "a1") inv
+                    , gridItem (GridPosition "b1") hlg
+                    , gridItem (GridPosition "c1") dx
+                    , gridItem (GridPosition "d1") fromHour
+                    , gridItem (GridPosition "e1") toHour
+                    , gridItem (GridPosition "a2") hours
+                    , gridItem (GridPosition "b2") neghours
+                    , gridItem (GridPosition "d2") btnNewGroup
+                    ]
+            in
+            case model.myStatus of
+                None ->
+                    gridItem (GridPosition "c2") btnOk
+                        :: itemsx
+
+                MyError err ->
+                    btnGridItem "elm-error" err
+                        :: itemsx
+
+                MySuccess s ->
+                    btnGridItem "elm-success" s
+                        :: itemsx
     in
-    H.div [ A.class "accounting-grid" ] items
+    H.div []
+        [ H.div
+            [ A.class "accounting-grid" ]
+            items
+        , DLG.modalDialog "Ny Timelistegruppe"
+            model.dlgNewGroup
+            NewGroupOk
+            NewGroupCancel
+            [ newGroupInput
+            ]
+        ]
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         InvoiceChanged s ->
-            Debug.log s
-                ( { model | invoice = String.toInt s }, Cmd.none )
+            ( { model | invoice = String.toInt s }, Cmd.none )
 
         HourlistGroupChanged s ->
             ( { model | hourlistGroup = String.toInt s }, Cmd.none )
@@ -170,8 +236,7 @@ update msg model =
             ( { model | invoices = data.invoices, hourlistGroups = data.hourlistGroups }, Cmd.none )
 
         InitDataFetched (Err err) ->
-            Debug.log (Util.httpErr2str err)
-                ( model, Cmd.none )
+            ( { model | myStatus = MyError (Util.httpErr2str err) }, Cmd.none )
 
         SetTodayDate tm ->
             ( { model | dato = Just <| DateUtil.todayISO8601 tm }, Cmd.none )
@@ -180,16 +245,58 @@ update msg model =
             ( model, saveToDb model )
 
         DataSaved (Ok status) ->
-            Debug.log "DataSaved"
-                ( model, Cmd.none )
+            ( model, Cmd.none )
 
         DataSaved (Err err) ->
-            Debug.log (Util.httpErr2str err)
-                ( model, Cmd.none )
+            ( { model | myStatus = MyError (Util.httpErr2str err) }, Cmd.none )
 
         SaveToDbParamsInvalid _ ->
-            Debug.log "SaveToDbParamsInvalid"
-                ( model, Cmd.none )
+            ( { model | myStatus = MyError "SaveToDb params invalid" }, Cmd.none )
+
+        NewGroupChanged s ->
+            let
+                curGroup =
+                    if String.length s == 0 then
+                        Nothing
+
+                    else
+                        Just s
+            in
+            ( { model | newHourlistGroup = curGroup }, Cmd.none )
+
+        NewGroupDialog ->
+            ( { model | dlgNewGroup = DLG.DialogVisible }, Cmd.none )
+
+        NewGroupOk ->
+            case model.newHourlistGroup of
+                Nothing ->
+                    ( { model | dlgNewGroup = DLG.DialogHidden, myStatus = None }, Cmd.none )
+
+                Just s ->
+                    ( model, saveNewGroup s )
+
+        -- ( { model | dlgNewGroup = DLG.DialogHidden, myStatus = MySuccess ("Saved new hourlist group: " ++ s) }, Cmd.none )
+        NewGroupCancel ->
+            ( { model | dlgNewGroup = DLG.DialogHidden, myStatus = None }, Cmd.none )
+
+        NewGroupSaved (Ok status) ->
+            let
+                txt =
+                    Maybe.withDefault "N/A" model.newHourlistGroup
+
+                oids =
+                    String.fromInt status.oid
+
+                newGroup =
+                    SelectItem oids (oids ++ " - " ++ txt)
+
+                newHourlistGroups =
+                    newGroup :: model.hourlistGroups
+            in
+            ( { model | dlgNewGroup = DLG.DialogHidden, hourlistGroups = newHourlistGroups }, Cmd.none )
+
+        NewGroupSaved (Err err) ->
+            ( { model | myStatus = MyError (Util.httpErr2str err) }, Cmd.none )
 
 
 selectItemDecoder : JD.Decoder SelectItem
@@ -220,6 +327,20 @@ fetchInitData =
 setTodayDate : Cmd Msg
 setTodayDate =
     Task.perform SetTodayDate Time.now
+
+
+saveNewGroup : String -> Cmd Msg
+saveNewGroup newGroup =
+    let
+        params =
+            [ ( "name", JE.string newGroup )
+            ]
+
+        jbody =
+            Util.asHttpBody params
+    in
+    Http.send NewGroupSaved <|
+        Http.post saveNewGroupUrl jbody statusDecoder
 
 
 saveToDb :

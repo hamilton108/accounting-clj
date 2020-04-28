@@ -1,0 +1,13 @@
+#!/bin/bash
+
+SRC=/accounting/sass-src/accounting.scss 
+
+TARGET=/accounting/resources/public/css/accounting.css
+
+# sass --style compressed sass-src/harborview.scss src/resources/public/css/harborview.css
+
+docker run --user $(id -u):$(id -g) --rm -v /home/rcs/opt/java/accounting-clj:/accounting rcs/sass sass $SRC $TARGET
+
+# sass --watch sass-src/harborview.scss:src/resources/public/css/harborview.css
+
+exit 0

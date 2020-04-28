@@ -1,0 +1,19 @@
+
+.elm-error, .elm-ok {
+  background-color: #FFFAF0;
+  font-family: "Roboto","Helvetica Neue","Helvetica",Helvetica,Arial,sans-serif;
+  font-size: 1.2em; 
+  margin-left: 1.0rem;
+}
+
+.elm-error {
+  color: #f00;
+}
+
+.elm-ok {
+  color: #0b0;
+}
+
+@import "grid";
+@import "checkbox";
+@import "dialog";

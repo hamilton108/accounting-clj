@@ -56,11 +56,10 @@
         (.setOid hb oid)
         (.updateHourlist facade hb)))))
 
-(comment insert-hourlist-group [name]
+(defn insert-hourlist-group [name]
   (let [hb (HourlistGroupBean.)]
     (.setDescription hb name)
-    (DB/with-session :koteriku HourlistGroupMapper
-                               (.insertHourlistGroup it hb))
+    (.insertHourlistGroup facade hb)
     hb))
 
 (comment

@@ -1,4 +1,4 @@
-(defproject accounting-clj "1.0"
+(defproject accounting-clj "1.0.0"
   :description "FIXME: write description"
   :url "http://example.com/FIXME"
   :license {:name "EPL-2.0 OR GPL-2.0-or-later WITH Classpath-exception-2.0"
@@ -10,7 +10,7 @@
 		         [org.mybatis/mybatis "3.5.4"]
 		         [org.postgresql/postgresql "42.2.10"]
                  [selmer "1.12.18"]
-                 [rcstadheim/accounting-repos "1.1.0"]
+                 [rcstadheim/accounting-repos "1.2.0"]
                  [cheshire "5.10.0"]]
   :repositories {"project" "file:repo"}
   :resource-paths [
