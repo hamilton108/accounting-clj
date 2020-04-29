@@ -4,6 +4,7 @@
     [gj.generaljournal.dbx :as DBX]
     [gj.generaljournal.html :as GJ]
     [gj.hourlist.html :as HRL]
+    [gj.service.commonutils :as U]
     [selmer.parser :as P]
     [compojure.route :as R])
   (:use
@@ -42,5 +43,11 @@
     wrap-params))
     ;U/allow-cross-origin))
 
+(comment -main [& args]
+  (let 
+    [props (U/load-props "application.properties")]
+    (run-jetty #'webapp {:port (:port props) :join? false})))
+
 (defn -main [& args]
-  (def server (run-jetty #'webapp {:port 6346 :join? false})))
+  ;(print (nth args 0))    
+  (run-jetty #'webapp {:port 8080 :join? false}))

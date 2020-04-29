@@ -1,0 +1,14 @@
+#!/bin/bash
+
+
+SRC="target/uberjar" 
+
+FNAME="$SRC/accounting-clj-$1-standalone.jar"
+
+TARGET="hilo:/home/rcs/opt/java/accounting-clj/"
+
+echo "$FNAME"
+
+scp $FNAME $TARGET
+
+exit 0

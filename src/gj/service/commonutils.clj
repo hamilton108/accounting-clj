@@ -1,4 +1,6 @@
 (ns gj.service.commonutils
+  (:require  
+    [clojure.java.io])
   (:import
     [java.time LocalDate LocalTime]))
 
@@ -79,6 +81,14 @@
        ~@body)
     `(defn ~name ~args ~@body)))
 
+(defn load-props
+  [file-name]
+  (with-open [^java.io.Reader reader (clojure.java.io/reader file-name)] 
+    (let [props (java.util.Properties.)]
+      (.load props reader)
+      (into {} (for [[k v] props] [(keyword k) (read-string v)])))))
+
+
 (comment
   ; EXAMPLE
   (defn-defaults foo [a b {c 5 d 10}]
@@ -87,3 +97,4 @@
   (foo 5 10) ;=> 30
   (foo 5 10 :c 10 :d 20) ;=> 45
   (foo 5 10 :c 0)) ;=> 25
+

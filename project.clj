@@ -1,4 +1,4 @@
-(defproject accounting-clj "1.0.0"
+(defproject accounting-clj "1.1.0"
   :description "FIXME: write description"
   :url "http://example.com/FIXME"
   :license {:name "EPL-2.0 OR GPL-2.0-or-later WITH Classpath-exception-2.0"
@@ -14,7 +14,7 @@
                  [cheshire "5.10.0"]]
   :repositories {"project" "file:repo"}
   :resource-paths [
-		;"/home/rcs/opt/java/accounting-repos/build/libs/accounting-repos-1.0.jar"
+		;"/home/rcs/opt/java/accounting-repos/build/libs/accounting-repos-1.2.0.jar"
         "resources"]
   :main ^:skip-aot gj.webapp 
   ;:manifest {"Class-Path" "accounting-repos-1.0.jar"}
