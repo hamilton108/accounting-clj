@@ -38,8 +38,8 @@
           totime (jr "totime")
           hours (jr "hours")]
       (println jr)
-      (DBX/update-hourlist fnr group curdate fromtime totime hours nil)
-      (U/json-response {:ok true :msg "Ok!" :oid -1})))
+      (let [newEntry (DBX/update-hourlist fnr group curdate fromtime totime hours nil)]
+        (U/json-response {:ok true :msg "Ok!" :oid (.getOid newEntry)}))))
   (POST "/newgroup" request 
     (let [jr (U/json-req-parse request)
           group (jr "name")]

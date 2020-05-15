@@ -49,12 +49,13 @@
       (.setLocalDate (U/str->date curdate))
       (.setFromTime from_time)
       (.setToTime to_time)
-      (.setHours (Double. hours)))
+      (.setHours (Double. (float hours))))
     (if (nil? oid)
       (.insertHourlist facade hb)
       (do
         (.setOid hb oid)
-        (.updateHourlist facade hb)))))
+        (.updateHourlist facade hb)))
+    hb))
 
 (defn insert-hourlist-group [name]
   (let [hb (HourlistGroupBean.)]

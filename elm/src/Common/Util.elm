@@ -1,6 +1,7 @@
 module Common.Util exposing
     ( asHttpBody
     , flip
+    , hourStrDiff
     , httpErr2str
     , lastElem
     , listAsHttpBody
@@ -89,3 +90,44 @@ unpackMaybe obj fn default =
 lastElem : List a -> Maybe a
 lastElem =
     List.foldl (Just >> always) Nothing
+
+
+hs2Tup : String -> ( Int, Int )
+hs2Tup hourString =
+    let
+        hx =
+            String.split ":" hourString
+    in
+    case hx of
+        [ h, m ] ->
+            ( Maybe.withDefault 0 (String.toInt h), Maybe.withDefault 0 (String.toInt m) )
+
+        _ ->
+            ( 0, 0 )
+
+
+hourStrDiff : String -> String -> Float
+hourStrDiff hx1 hx2 =
+    let
+        ( h1, m1 ) =
+            hs2Tup hx1
+
+        ( h2, m2 ) =
+            hs2Tup hx2
+
+        h =
+            h2 - h1
+
+        m =
+            m2 - m1
+
+        {-
+           hx =
+               if h < 0 then
+                   h + 24
+
+               else
+                   h
+        -}
+    in
+    toFloat ((h * 60) + m) / 60.0

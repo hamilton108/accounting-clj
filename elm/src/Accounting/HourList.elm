@@ -60,6 +60,7 @@ type alias Model =
     , toHour : String
     , hours : Maybe Float
     , negativeHours : Maybe Float
+    , resultHours : Maybe Float
     , myStatus : MyStatus
     , dlgNewGroup : DLG.DialogState
     }
@@ -78,6 +79,7 @@ type Msg
     | FromHourChanged String
     | ToHourChanged String
     | HoursChanged String
+    | NegHoursChanged String
     | InitDataFetched (Result Http.Error InitData)
     | SetTodayDate Time.Posix
     | Save
@@ -100,8 +102,9 @@ init =
       , dato = Nothing
       , fromHour = "08:00"
       , toHour = "16:00"
-      , hours = Just 7.5
-      , negativeHours = Just 0.5
+      , hours = Just 8
+      , negativeHours = Just 0.0
+      , resultHours = Just 8
       , myStatus = None
       , dlgNewGroup = DLG.DialogHidden
       }
@@ -149,16 +152,19 @@ view model =
             timeInput ToHourChanged (LabelText "To") (Just model.toHour)
 
         hours =
-            numberInput HoursChanged (LabelText "Timer") (Maybe.map String.fromFloat model.hours)
+            numberInput HoursChanged (LabelText "Timer") (Maybe.map String.fromFloat model.resultHours)
 
         neghours =
-            numberInput HoursChanged (LabelText "Pause") (Maybe.map String.fromFloat model.negativeHours)
+            numberInput NegHoursChanged (LabelText "Pause") (Maybe.map String.fromFloat model.negativeHours)
 
         btnOk =
             button Save Success "Lagre" True
 
         btnNewGroup =
             button NewGroupDialog Success "Ny gruppe" True
+
+        btnNewInvoice =
+            button NewGroupDialog Success "Ny faktura" True
 
         newGroupInput =
             textInput NewGroupChanged (LabelText "Timelistegruppe") model.newHourlistGroup
@@ -183,6 +189,7 @@ view model =
                     , gridItem (GridPosition "a2") hours
                     , gridItem (GridPosition "b2") neghours
                     , gridItem (GridPosition "d2") btnNewGroup
+                    , gridItem (GridPosition "e2") btnNewInvoice
                     ]
             in
             case model.myStatus of
@@ -211,6 +218,11 @@ view model =
         ]
 
 
+calcHours : String -> String -> Float
+calcHours fromH toH =
+    Util.hourStrDiff fromH toH
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
@@ -224,13 +236,38 @@ update msg model =
             ( { model | dato = Just s }, Cmd.none )
 
         FromHourChanged s ->
-            ( { model | fromHour = s }, Cmd.none )
+            let
+                calculated =
+                    Just <| calcHours s model.toHour
+
+                resH =
+                    Maybe.map2 (\v1 v2 -> v1 - v2) calculated model.negativeHours
+            in
+            ( { model | fromHour = s, hours = calculated, resultHours = resH }, Cmd.none )
 
         ToHourChanged s ->
-            ( { model | toHour = s }, Cmd.none )
+            let
+                calculated =
+                    Just <| calcHours model.fromHour s
+
+                resH =
+                    Maybe.map2 (\v1 v2 -> v1 - v2) calculated model.negativeHours
+            in
+            ( { model | toHour = s, hours = calculated, resultHours = resH }, Cmd.none )
 
         HoursChanged s ->
-            ( { model | hours = String.toFloat s }, Cmd.none )
+            let
+                h =
+                    String.toFloat s
+            in
+            ( { model | hours = h, resultHours = h, negativeHours = Just 0.0 }, Cmd.none )
+
+        NegHoursChanged s ->
+            let
+                newNegH =
+                    String.toFloat s
+            in
+            ( { model | negativeHours = newNegH, resultHours = Maybe.map2 (\v1 v2 -> v1 - v2) model.hours newNegH }, Cmd.none )
 
         InitDataFetched (Ok data) ->
             ( { model | invoices = data.invoices, hourlistGroups = data.hourlistGroups }, Cmd.none )
@@ -245,7 +282,7 @@ update msg model =
             ( model, saveToDb model )
 
         DataSaved (Ok status) ->
-            ( model, Cmd.none )
+            ( { model | myStatus = MySuccess (String.fromInt status.oid) }, Cmd.none )
 
         DataSaved (Err err) ->
             ( { model | myStatus = MyError (Util.httpErr2str err) }, Cmd.none )
