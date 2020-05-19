@@ -36,6 +36,12 @@
 (defn fetch-last-5 [invoice]
   (.selectLast5 facade invoice))
 
+(defn fetch-latest-invoice-num []
+  (.lastInvoiceNum ^HourlistFacade facade))
+
+(defn fetch-companies []
+  (.selectCompanies ^HourlistFacade facade))
+
 (comment fetch-all [invoice]
   (DB/with-session :koteriku HourlistMapper
     (.selectAll it (U/rs invoice))))
@@ -63,14 +69,3 @@
     (.insertHourlistGroup facade hb)
     hb))
 
-(comment
-  (let [hb (HourlistBean.)
-        f (KoterikuFacade.)]
-    (doto hb
-      (.setInvoiceNr (Integer. fnr))
-      (.setGroupId (Integer. group))
-      (.setSqlDate (U/str->date curdate))
-      (.setFromTime from_time)
-      (.setToTime to_time)
-      (.setHours (Double. hours)))
-    (.insertHourlist f hb)))

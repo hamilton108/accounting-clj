@@ -10,7 +10,7 @@
 		         [org.mybatis/mybatis "3.5.4"]
 		         [org.postgresql/postgresql "42.2.10"]
                  [selmer "1.12.18"]
-                 [rcstadheim/accounting-repos "1.2.0"]
+                 [rcstadheim/accounting-repos "1.4.3"]
                  [cheshire "5.10.0"]]
   :repositories {"project" "file:repo"}
   :resource-paths [

@@ -1,6 +1,6 @@
 (ns gj.hourlist.html
   (:import
-    [accountingrepos.dto HourlistGroupBean])
+     [accountingrepos.dto CompanyBean HourlistGroupBean])
   (:require
     ;[selmer.parser :as P]
     [compojure.core :refer (GET POST defroutes)]
@@ -10,6 +10,9 @@
 
 (defn hourlistgroup->select [^HourlistGroupBean x]
   {:t (str (.getId x) " - " (.getDescription x)) :v (str (.getId x))})
+
+(defn companies->select [^CompanyBean x]
+  {:t (str (.getOid x) " - " (.getCompanyName x)) :v (str (.getOid x))})
 
 (defn hourlist []
     {:invoices
@@ -23,6 +26,11 @@
       (map hourlistgroup->select
         (DBX/fetch-hourlist-groups false))})
 
+(defn new-invoice []
+  (let [latest-invoice (DBX/fetch-latest-invoice-num)
+        companies (map companies->select (DBX/fetch-companies))]
+    {:fnr (inc latest-invoice) 
+     :companyid companies}))
 
 (defroutes my-routes
   (GET "/latestdata" []
@@ -45,7 +53,10 @@
           group (jr "name")]
       (println jr)
       (let [newGroupBean (DBX/insert-hourlist-group group)]
-        (U/json-response {:ok true :msg "Ok!" :oid (.getId newGroupBean)})))))
+        (U/json-response {:ok true :msg "Ok!" :oid (.getId newGroupBean)}))))
+  (GET "/newinvoice" []
+    (U/json-response 
+      (new-invoice))))
 
       ;(U/json-response (DBX/fetch-last-5 fnr)))))
 

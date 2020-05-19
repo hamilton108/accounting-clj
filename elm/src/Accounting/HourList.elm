@@ -44,9 +44,23 @@ saveUrl =
     mainUrl ++ "/insert"
 
 
+newInvoiceUrl : String
+newInvoiceUrl =
+    mainUrl ++ "/newinvoice"
+
+
 saveNewGroupUrl : String
 saveNewGroupUrl =
     mainUrl ++ "/newgroup"
+
+
+type alias InvoiceModel =
+    { fnr : Maybe Int
+    , invoiceDate : Maybe String
+    , dueDate : Maybe String
+    , desc : String
+    , companyId : List SelectItem
+    }
 
 
 type alias Model =
@@ -63,6 +77,8 @@ type alias Model =
     , resultHours : Maybe Float
     , myStatus : MyStatus
     , dlgNewGroup : DLG.DialogState
+    , dlgNewInvoice : DLG.DialogState
+    , newInvoice : InvoiceModel
     }
 
 
@@ -70,6 +86,27 @@ type MyStatus
     = None
     | MyError String
     | MySuccess String
+
+
+type NewGroupMsg
+    = NewGroupChanged String
+    | NewGroupDialog
+    | NewGroupOk
+    | NewGroupCancel
+    | NewGroupSaved (Result Http.Error JsonStatus)
+
+
+type NewInvoiceMsg
+    = FnrChanged String
+    | InvDateChanged String
+    | DueDateChanged String
+    | DescChanged String
+    | CompanyIdChanged String
+    | NewInvoiceDataFetched (Result Http.Error InvoiceModel)
+    | NewInvoiceDialog
+    | NewInvoiceOk
+    | NewInvoiceCancel
+    | NewInvoiceSaved (Result Http.Error JsonStatus)
 
 
 type Msg
@@ -85,11 +122,65 @@ type Msg
     | Save
     | DataSaved (Result Http.Error JsonStatus)
     | SaveToDbParamsInvalid ()
-    | NewGroupChanged String
-    | NewGroupDialog
-    | NewGroupOk
-    | NewGroupCancel
-    | NewGroupSaved (Result Http.Error JsonStatus)
+    | NewGroupMsgFor NewGroupMsg
+    | NewInvoiceMsgFor NewInvoiceMsg
+
+
+
+{-
+   | NewInvoiceDialog
+   | NewInvoiceOk
+   | NewInvoiceCancel
+   | NewInvoiceSaved (Result Http.Error JsonStatus)
+-}
+
+
+initInvoiceModel : InvoiceModel
+initInvoiceModel =
+    { fnr = Nothing
+    , invoiceDate = Nothing
+    , dueDate = Nothing
+    , desc = ""
+    , companyId = []
+    }
+
+
+setFnr : Maybe Int -> InvoiceModel -> InvoiceModel
+setFnr fnr model =
+    { model | fnr = fnr }
+
+
+setDesc : String -> InvoiceModel -> InvoiceModel
+setDesc s model =
+    { model | desc = s }
+
+
+setInvoiceDate : String -> InvoiceModel -> InvoiceModel
+setInvoiceDate s model =
+    { model | invoiceDate = Just s }
+
+
+setDueDate : String -> InvoiceModel -> InvoiceModel
+setDueDate s model =
+    { model | dueDate = Just s }
+
+
+setCompanyId : List SelectItem -> InvoiceModel -> InvoiceModel
+setCompanyId s model =
+    { model | companyId = s }
+
+
+
+{-
+   asDescIn : InvoiceModel -> String -> InvoiceModel
+   asDescIn =
+       Util.flip setDesc
+-}
+
+
+asInvoiceModelIn : Model -> InvoiceModel -> Model
+asInvoiceModelIn model invoice =
+    { model | newInvoice = invoice }
 
 
 init : ( Model, Cmd Msg )
@@ -107,6 +198,8 @@ init =
       , resultHours = Just 8
       , myStatus = None
       , dlgNewGroup = DLG.DialogHidden
+      , dlgNewInvoice = DLG.DialogHidden
+      , newInvoice = initInvoiceModel
       }
     , Cmd.batch [ setTodayDate, fetchInitData ]
     )
@@ -161,13 +254,10 @@ view model =
             button Save Success "Lagre" True
 
         btnNewGroup =
-            button NewGroupDialog Success "Ny gruppe" True
+            button (NewGroupMsgFor NewGroupDialog) Success "Ny gruppe" True
 
         btnNewInvoice =
-            button NewGroupDialog Success "Ny faktura" True
-
-        newGroupInput =
-            textInput NewGroupChanged (LabelText "Timelistegruppe") model.newHourlistGroup
+            button (NewInvoiceMsgFor NewInvoiceDialog) Success "Ny faktura" True
 
         btnGridItem : String -> String -> H.Html Msg
         btnGridItem elmClass text =
@@ -209,18 +299,145 @@ view model =
         [ H.div
             [ A.class "accounting-grid" ]
             items
-        , DLG.modalDialog "Ny Timelistegruppe"
-            model.dlgNewGroup
-            NewGroupOk
-            NewGroupCancel
-            [ newGroupInput
-            ]
+        , newGroupDialog model
+        , newInvoiceDialog model
         ]
+
+
+newInvoiceDialog : Model -> H.Html Msg
+newInvoiceDialog model =
+    let
+        invModel =
+            model.newInvoice
+
+        fnr =
+            numberInput (NewInvoiceMsgFor << FnrChanged) (LabelText "Fakturanr") (Maybe.map String.fromInt invModel.fnr)
+
+        invDate =
+            dateInput (NewInvoiceMsgFor << InvDateChanged) (LabelText "Fakturadato") invModel.invoiceDate
+
+        dueDate =
+            dateInput (NewInvoiceMsgFor << DueDateChanged) (LabelText "Forfall") invModel.dueDate
+
+        desc =
+            textInput (NewInvoiceMsgFor << DescChanged) (LabelText "Spesifikasjon") (Just invModel.desc)
+
+        companyId =
+            makeSelect (NewInvoiceMsgFor << CompanyIdChanged) "Firma id" invModel.companyId Nothing
+    in
+    DLG.modalDialog "Ny Faktura"
+        model.dlgNewInvoice
+        (NewInvoiceMsgFor NewInvoiceOk)
+        (NewInvoiceMsgFor NewInvoiceCancel)
+        [ fnr, invDate, dueDate, desc, companyId ]
+
+
+newGroupDialog : Model -> H.Html Msg
+newGroupDialog model =
+    let
+        newGroupInput =
+            textInput (NewGroupMsgFor << NewGroupChanged) (LabelText "Timelistegruppe") model.newHourlistGroup
+    in
+    DLG.modalDialog "Ny Timelistegruppe"
+        model.dlgNewGroup
+        (NewGroupMsgFor NewGroupOk)
+        (NewGroupMsgFor NewGroupCancel)
+        [ newGroupInput ]
 
 
 calcHours : String -> String -> Float
 calcHours fromH toH =
     Util.hourStrDiff fromH toH
+
+
+updateNewGroup : NewGroupMsg -> Model -> ( Model, Cmd Msg )
+updateNewGroup msg model =
+    case msg of
+        NewGroupChanged s ->
+            let
+                curGroup =
+                    if String.length s == 0 then
+                        Nothing
+
+                    else
+                        Just s
+            in
+            ( { model | newHourlistGroup = curGroup }, Cmd.none )
+
+        NewGroupDialog ->
+            ( { model | dlgNewGroup = DLG.DialogVisible }, Cmd.none )
+
+        NewGroupOk ->
+            case model.newHourlistGroup of
+                Nothing ->
+                    ( { model | dlgNewGroup = DLG.DialogHidden, myStatus = None }, Cmd.none )
+
+                Just s ->
+                    ( model, saveNewGroup s )
+
+        NewGroupCancel ->
+            ( { model | dlgNewGroup = DLG.DialogHidden, myStatus = None }, Cmd.none )
+
+        NewGroupSaved (Ok status) ->
+            let
+                txt =
+                    Maybe.withDefault "N/A" model.newHourlistGroup
+
+                oids =
+                    String.fromInt status.oid
+
+                newGroup =
+                    SelectItem oids (oids ++ " - " ++ txt)
+
+                newHourlistGroups =
+                    newGroup :: model.hourlistGroups
+            in
+            ( { model | dlgNewGroup = DLG.DialogHidden, hourlistGroups = newHourlistGroups }, Cmd.none )
+
+        NewGroupSaved (Err err) ->
+            ( { model | myStatus = MyError (Util.httpErr2str err) }, Cmd.none )
+
+
+updateNewInvoice : NewInvoiceMsg -> Model -> ( Model, Cmd Msg )
+updateNewInvoice msg model =
+    case msg of
+        FnrChanged s ->
+            ( model.newInvoice |> setFnr (String.toInt s) |> asInvoiceModelIn model, Cmd.none )
+
+        InvDateChanged s ->
+            ( model.newInvoice |> setInvoiceDate s |> asInvoiceModelIn model, Cmd.none )
+
+        DueDateChanged s ->
+            ( model, Cmd.none )
+
+        DescChanged s ->
+            ( model.newInvoice |> setDesc s |> asInvoiceModelIn model, Cmd.none )
+
+        CompanyIdChanged s ->
+            --( { model | hourlistGroup = String.toInt s }, Cmd.none )
+            ( model, Cmd.none )
+
+        NewInvoiceDialog ->
+            --( { model | dlgNewInvoice = DLG.DialogVisible }, Cmd.none )
+            ( model, fetchNewInvoiceData )
+
+        NewInvoiceDataFetched (Ok data) ->
+            ( { model | dlgNewInvoice = DLG.DialogVisible, newInvoice = data }, Cmd.none )
+
+        NewInvoiceDataFetched (Err err) ->
+            ( { model | myStatus = MyError (Util.httpErr2str err) }, Cmd.none )
+
+        NewInvoiceOk ->
+            ( { model | dlgNewInvoice = DLG.DialogHidden, myStatus = None }, Cmd.none )
+
+        NewInvoiceCancel ->
+            ( { model | dlgNewInvoice = DLG.DialogHidden, myStatus = None }, Cmd.none )
+
+        NewInvoiceSaved (Ok status) ->
+            ( model, Cmd.none )
+
+        NewInvoiceSaved (Err err) ->
+            ( { model | myStatus = MyError (Util.httpErr2str err) }, Cmd.none )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -290,50 +507,11 @@ update msg model =
         SaveToDbParamsInvalid _ ->
             ( { model | myStatus = MyError "SaveToDb params invalid" }, Cmd.none )
 
-        NewGroupChanged s ->
-            let
-                curGroup =
-                    if String.length s == 0 then
-                        Nothing
+        NewGroupMsgFor groupMsg ->
+            updateNewGroup groupMsg model
 
-                    else
-                        Just s
-            in
-            ( { model | newHourlistGroup = curGroup }, Cmd.none )
-
-        NewGroupDialog ->
-            ( { model | dlgNewGroup = DLG.DialogVisible }, Cmd.none )
-
-        NewGroupOk ->
-            case model.newHourlistGroup of
-                Nothing ->
-                    ( { model | dlgNewGroup = DLG.DialogHidden, myStatus = None }, Cmd.none )
-
-                Just s ->
-                    ( model, saveNewGroup s )
-
-        -- ( { model | dlgNewGroup = DLG.DialogHidden, myStatus = MySuccess ("Saved new hourlist group: " ++ s) }, Cmd.none )
-        NewGroupCancel ->
-            ( { model | dlgNewGroup = DLG.DialogHidden, myStatus = None }, Cmd.none )
-
-        NewGroupSaved (Ok status) ->
-            let
-                txt =
-                    Maybe.withDefault "N/A" model.newHourlistGroup
-
-                oids =
-                    String.fromInt status.oid
-
-                newGroup =
-                    SelectItem oids (oids ++ " - " ++ txt)
-
-                newHourlistGroups =
-                    newGroup :: model.hourlistGroups
-            in
-            ( { model | dlgNewGroup = DLG.DialogHidden, hourlistGroups = newHourlistGroups }, Cmd.none )
-
-        NewGroupSaved (Err err) ->
-            ( { model | myStatus = MyError (Util.httpErr2str err) }, Cmd.none )
+        NewInvoiceMsgFor invoiceMsg ->
+            updateNewInvoice invoiceMsg model
 
 
 selectItemDecoder : JD.Decoder SelectItem
@@ -361,6 +539,21 @@ fetchInitData =
     Http.send InitDataFetched <| Http.get initUrl initDataDecoder
 
 
+newInvoiceDecoder : JD.Decoder InvoiceModel
+newInvoiceDecoder =
+    JD.succeed InvoiceModel
+        |> JP.required "fnr" (JD.nullable JD.int)
+        |> JP.hardcoded Nothing
+        |> JP.hardcoded Nothing
+        |> JP.hardcoded ""
+        |> JP.required "companyid" (JD.list selectItemDecoder)
+
+
+fetchNewInvoiceData : Cmd Msg
+fetchNewInvoiceData =
+    Http.send (NewInvoiceMsgFor << NewInvoiceDataFetched) <| Http.get newInvoiceUrl newInvoiceDecoder
+
+
 setTodayDate : Cmd Msg
 setTodayDate =
     Task.perform SetTodayDate Time.now
@@ -376,7 +569,7 @@ saveNewGroup newGroup =
         jbody =
             Util.asHttpBody params
     in
-    Http.send NewGroupSaved <|
+    Http.send (NewGroupMsgFor << NewGroupSaved) <|
         Http.post saveNewGroupUrl jbody statusDecoder
 
 
