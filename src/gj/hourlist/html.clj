@@ -1,6 +1,7 @@
 (ns gj.hourlist.html
   (:import
-     [accountingrepos.dto CompanyBean HourlistGroupBean])
+    [java.time LocalDate]
+    [accountingrepos.dto CompanyBean HourlistGroupBean])
   (:require
     ;[selmer.parser :as P]
     [compojure.core :refer (GET POST defroutes)]
@@ -32,6 +33,9 @@
     {:fnr (inc latest-invoice) 
      :companyid companies}))
 
+(defn tax-year []
+  2020)
+
 (defroutes my-routes
   (GET "/latestdata" []
     (U/json-response 
@@ -54,6 +58,16 @@
       (println jr)
       (let [newGroupBean (DBX/insert-hourlist-group group)]
         (U/json-response {:ok true :msg "Ok!" :oid (.getId newGroupBean)}))))
+  (POST "/insertinvoice" request 
+    (let [jr (U/json-req-parse request)
+          fnr (jr "fnr")
+          date (LocalDate/parse (jr "date")) 
+          duedate (LocalDate/parse (jr "duedate")) 
+          desc (jr "desc")
+          companyid (jr "companyid")]
+      (println jr)
+      (let [newEntry (DBX/insert-invoice fnr date duedate desc companyid (tax-year))]
+        (U/json-response {:ok true :msg "Ok!" :oid -1}))))
   (GET "/newinvoice" []
     (U/json-response 
       (new-invoice))))

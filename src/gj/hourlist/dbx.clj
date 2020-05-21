@@ -1,6 +1,7 @@
 (ns gj.hourlist.dbx
   (:import
     [accountingrepos.dto
+      InvoiceBean
       HourlistBean
       HourlistGroupBean]
     [accountingrepos.mybatis
@@ -32,6 +33,18 @@
 
 (defn fetch-invoices []
   (.selectInvoices ^HourlistFacade facade))
+
+(defn insert-invoice [fnr date duedate desc companyid taxyear]
+  (let [ib (InvoiceBean.)]
+    (doto ib
+      (.setInvoiceNum fnr)
+      (.setInvoiceDate date)
+      (.setDueDate duedate)
+      (.setDescription desc)
+      (.setCompanyId companyid)
+      (.setTaxYear taxyear))
+    (.insertInvoice ^HourlistFacade facade ib)))
+
 
 (defn fetch-last-5 [invoice]
   (.selectLast5 facade invoice))

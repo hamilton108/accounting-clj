@@ -49,6 +49,11 @@ newInvoiceUrl =
     mainUrl ++ "/newinvoice"
 
 
+saveNewInvoiceUrl : String
+saveNewInvoiceUrl =
+    mainUrl ++ "/insertinvoice"
+
+
 saveNewGroupUrl : String
 saveNewGroupUrl =
     mainUrl ++ "/newgroup"
@@ -59,7 +64,8 @@ type alias InvoiceModel =
     , invoiceDate : Maybe String
     , dueDate : Maybe String
     , desc : String
-    , companyId : List SelectItem
+    , companyIds : List SelectItem
+    , companyId : Maybe Int
     }
 
 
@@ -141,7 +147,8 @@ initInvoiceModel =
     , invoiceDate = Nothing
     , dueDate = Nothing
     , desc = ""
-    , companyId = []
+    , companyIds = []
+    , companyId = Nothing
     }
 
 
@@ -165,9 +172,9 @@ setDueDate s model =
     { model | dueDate = Just s }
 
 
-setCompanyId : List SelectItem -> InvoiceModel -> InvoiceModel
+setCompanyId : String -> InvoiceModel -> InvoiceModel
 setCompanyId s model =
-    { model | companyId = s }
+    { model | companyId = String.toInt s }
 
 
 
@@ -323,7 +330,7 @@ newInvoiceDialog model =
             textInput (NewInvoiceMsgFor << DescChanged) (LabelText "Spesifikasjon") (Just invModel.desc)
 
         companyId =
-            makeSelect (NewInvoiceMsgFor << CompanyIdChanged) "Firma id" invModel.companyId Nothing
+            makeSelect (NewInvoiceMsgFor << CompanyIdChanged) "Firma id" invModel.companyIds Nothing
     in
     DLG.modalDialog "Ny Faktura"
         model.dlgNewInvoice
@@ -408,14 +415,14 @@ updateNewInvoice msg model =
             ( model.newInvoice |> setInvoiceDate s |> asInvoiceModelIn model, Cmd.none )
 
         DueDateChanged s ->
-            ( model, Cmd.none )
+            ( model.newInvoice |> setDueDate s |> asInvoiceModelIn model, Cmd.none )
 
         DescChanged s ->
             ( model.newInvoice |> setDesc s |> asInvoiceModelIn model, Cmd.none )
 
         CompanyIdChanged s ->
             --( { model | hourlistGroup = String.toInt s }, Cmd.none )
-            ( model, Cmd.none )
+            ( model.newInvoice |> setCompanyId s |> asInvoiceModelIn model, Cmd.none )
 
         NewInvoiceDialog ->
             --( { model | dlgNewInvoice = DLG.DialogVisible }, Cmd.none )
@@ -428,16 +435,19 @@ updateNewInvoice msg model =
             ( { model | myStatus = MyError (Util.httpErr2str err) }, Cmd.none )
 
         NewInvoiceOk ->
-            ( { model | dlgNewInvoice = DLG.DialogHidden, myStatus = None }, Cmd.none )
+            Debug.log "NewInvoiceOK"
+                ( { model | dlgNewInvoice = DLG.DialogHidden, myStatus = None }, saveNewInvoice model.newInvoice )
 
         NewInvoiceCancel ->
             ( { model | dlgNewInvoice = DLG.DialogHidden, myStatus = None }, Cmd.none )
 
         NewInvoiceSaved (Ok status) ->
-            ( model, Cmd.none )
+            Debug.log "NewInvoiceSaved"
+                ( model, Cmd.none )
 
         NewInvoiceSaved (Err err) ->
-            ( { model | myStatus = MyError (Util.httpErr2str err) }, Cmd.none )
+            Debug.log "NewInvoiceSaved err"
+                ( { model | myStatus = MyError (Util.httpErr2str err) }, Cmd.none )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -547,6 +557,7 @@ newInvoiceDecoder =
         |> JP.hardcoded Nothing
         |> JP.hardcoded ""
         |> JP.required "companyid" (JD.list selectItemDecoder)
+        |> JP.hardcoded Nothing
 
 
 fetchNewInvoiceData : Cmd Msg
@@ -571,6 +582,46 @@ saveNewGroup newGroup =
     in
     Http.send (NewGroupMsgFor << NewGroupSaved) <|
         Http.post saveNewGroupUrl jbody statusDecoder
+
+
+saveNewInvoice : InvoiceModel -> Cmd Msg
+saveNewInvoice model =
+    let
+        params =
+            model.fnr
+                |> Maybe.andThen
+                    (\fnr1 ->
+                        model.invoiceDate
+                            |> Maybe.andThen
+                                (\invoiceDate1 ->
+                                    model.dueDate
+                                        |> Maybe.andThen
+                                            (\dueDate1 ->
+                                                model.companyId
+                                                    |> Maybe.andThen
+                                                        (\companyId1 ->
+                                                            Just
+                                                                [ ( "fnr", JE.int fnr1 )
+                                                                , ( "date", JE.string invoiceDate1 )
+                                                                , ( "duedate", JE.string dueDate1 )
+                                                                , ( "desc", JE.string model.desc )
+                                                                , ( "companyid", JE.int companyId1 )
+                                                                ]
+                                                        )
+                                            )
+                                )
+                    )
+    in
+    case params of
+        Nothing ->
+            Task.perform SaveToDbParamsInvalid (Task.succeed ())
+
+        Just params1 ->
+            let
+                jbody =
+                    Util.asHttpBody params1
+            in
+            Http.send (NewInvoiceMsgFor << NewInvoiceSaved) <| Http.post saveNewInvoiceUrl jbody statusDecoder
 
 
 saveToDb :
