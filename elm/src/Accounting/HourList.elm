@@ -435,19 +435,26 @@ updateNewInvoice msg model =
             ( { model | myStatus = MyError (Util.httpErr2str err) }, Cmd.none )
 
         NewInvoiceOk ->
-            Debug.log "NewInvoiceOK"
-                ( { model | dlgNewInvoice = DLG.DialogHidden, myStatus = None }, saveNewInvoice model.newInvoice )
+            ( { model | dlgNewInvoice = DLG.DialogHidden, myStatus = None }, saveNewInvoice model.newInvoice )
 
         NewInvoiceCancel ->
             ( { model | dlgNewInvoice = DLG.DialogHidden, myStatus = None }, Cmd.none )
 
-        NewInvoiceSaved (Ok status) ->
-            Debug.log "NewInvoiceSaved"
-                ( model, Cmd.none )
+        NewInvoiceSaved (Ok _) ->
+            let
+                oids =
+                    String.fromInt <| Maybe.withDefault 0 model.newInvoice.fnr
+
+                newInvoice =
+                    SelectItem oids (oids ++ " - " ++ model.newInvoice.desc)
+
+                newInvoices =
+                    newInvoice :: model.invoices
+            in
+            ( { model | invoices = newInvoices }, Cmd.none )
 
         NewInvoiceSaved (Err err) ->
-            Debug.log "NewInvoiceSaved err"
-                ( { model | myStatus = MyError (Util.httpErr2str err) }, Cmd.none )
+            ( { model | myStatus = MyError (Util.httpErr2str err) }, Cmd.none )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
