@@ -261,7 +261,7 @@ calcMvaAmount cb belop =
         Nothing
 
     else
-        Maybe.map ((*) 0.25) belop
+        Maybe.map ((*) 0.2) belop
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
