@@ -91,11 +91,13 @@ myPresets =
     , { val = "3", txt = "NextGenTel" }
     , { val = "4", txt = "NetCom" }
     , { val = "5", txt = "Telenor" }
-    , { val = "6", txt = "Obos" }
+    , { val = "6", txt = "Rudshøgda boligsameie" }
     , { val = "7", txt = "Hafslund" }
     , { val = "8", txt = "Lunsj" }
     , { val = "9", txt = "Overtidsmat" }
     , { val = "10", txt = "Ruter mnd kort" }
+    , { val = "11", txt = "Ruter" }
+    , { val = "12", txt = "OSL" }
     ]
 
 
@@ -364,7 +366,7 @@ updatePreset model preset =
                     ( Just 6900, "Telenor", True )
 
                 "6" ->
-                    ( Just 6300, "OBOS", False )
+                    ( Just 6300, "Rudshøgda boligsameie", False )
 
                 "7" ->
                     ( Just 6340, "Hafslund", False )
@@ -377,6 +379,12 @@ updatePreset model preset =
 
                 "10" ->
                     ( Just 7140, "Ruter mnd kort", False )
+
+                "11" ->
+                    ( Just 7140, "Ruter", False )
+
+                "12" ->
+                    ( Just 7140, "OSL", False )
 
                 _ ->
                     ( Nothing, "", False )

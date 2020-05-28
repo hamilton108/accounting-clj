@@ -240,22 +240,22 @@ buttonClass : BootstrapButton -> String
 buttonClass b =
     case b of
         Success ->
-            "btn btn-outline-success"
+            "btn btn-outline-success elm-btn"
 
         Danger ->
-            "btn btn-outline-danger"
+            "btn btn-outline-danger elm-btn"
 
         DlgSuccess ->
-            "btn btn-outline-success btn-modal-dlg"
+            "btn btn-outline-success btn-modal-dlg elm-btn"
 
         DlgDanger ->
-            "btn btn-outline-danger btn-modal-dlg"
+            "btn btn-outline-danger btn-modal-dlg elm-btn"
 
         Header ->
-            "btn main-btn btn-outline-success"
+            "btn main-btn btn-outline-success elm-btn"
 
         HeaderDanger ->
-            "btn main-btn btn-outline-danger"
+            "btn main-btn btn-outline-danger elm-btn"
 
 
 button :

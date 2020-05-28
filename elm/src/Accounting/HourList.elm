@@ -16,6 +16,7 @@ import Accounting.Ui
         , textInput
         , timeInput
         )
+import Bootstrap.Table as Table
 import Common.DateUtil as DateUtil
 import Common.ModalDialog as DLG
 import Common.Util as Util
@@ -69,6 +70,27 @@ type alias InvoiceModel =
     }
 
 
+
+{-
+    oid | fnr |    dato    | timer | gruppe |      gruppe_spes       | spesifikasjon | fra_klokken | til_klokken
+   -----+-----+------------+-------+--------+------------------------+---------------+-------------+-------------
+      1 | 211 | 2009-03-17 |  7.50 |      1 | Shift Manager, support |               | 00:00       | 00:00
+      2 | 211 | 2009-03-18 |  8.00 |      1 | Shift Manager, support |               | 00:00       | 00:00
+      3 | 211 | 2009-03-19 |  9.00 |      1 | Shift Manager, support |               | 00:00       | 00:00
+-}
+
+
+type alias HourListItem =
+    { fnr : Int
+    , hdate : String
+    , hours : Float
+    , group : String
+    , desc : String
+    , fromHour : String
+    , toHour : String
+    }
+
+
 type alias Model =
     { invoices : List SelectItem
     , invoice : Maybe Int
@@ -80,11 +102,13 @@ type alias Model =
     , toHour : String
     , hours : Maybe Float
     , negativeHours : Maybe Float
+    , desc : Maybe String
     , resultHours : Maybe Float
     , myStatus : MyStatus
     , dlgNewGroup : DLG.DialogState
     , dlgNewInvoice : DLG.DialogState
     , newInvoice : InvoiceModel
+    , items : List HourListItem
     }
 
 
@@ -123,6 +147,7 @@ type Msg
     | ToHourChanged String
     | HoursChanged String
     | NegHoursChanged String
+    | HourListDescChanged String
     | InitDataFetched (Result Http.Error InitData)
     | SetTodayDate Time.Posix
     | Save
@@ -202,11 +227,13 @@ init =
       , toHour = "16:00"
       , hours = Just 8
       , negativeHours = Just 0.0
+      , desc = Nothing
       , resultHours = Just 8
       , myStatus = None
       , dlgNewGroup = DLG.DialogHidden
       , dlgNewInvoice = DLG.DialogHidden
       , newInvoice = initInvoiceModel
+      , items = []
       }
     , Cmd.batch [ setTodayDate, fetchInitData ]
     )
@@ -228,6 +255,42 @@ statusDecoder =
         |> JP.required "ok" JD.bool
         |> JP.required "msg" JD.string
         |> JP.required "oid" JD.int
+
+
+hourListRow : HourListItem -> Table.Row Msg
+hourListRow r =
+    Table.tr []
+        [ Table.td [] [ H.text (String.fromInt r.fnr) ]
+        , Table.td [] [ H.text r.hdate ]
+        , Table.td [] [ H.text (String.fromFloat r.hours) ]
+        , Table.td [] [ H.text r.group ]
+        , Table.td [] [ H.text r.desc ]
+        , Table.td [] [ H.text r.fromHour ]
+        , Table.td [] [ H.text r.toHour ]
+        ]
+
+
+curHourListItems : { r | items : List HourListItem } -> H.Html Msg
+curHourListItems model =
+    let
+        rows =
+            List.map hourListRow model.items
+    in
+    Table.table
+        { options = [ Table.small ]
+        , thead =
+            Table.simpleThead
+                [ Table.th [] [ H.text "Fnr" ]
+                , Table.th [] [ H.text "Dato" ]
+                , Table.th [] [ H.text "Timer" ]
+                , Table.th [] [ H.text "Gruppe" ]
+                , Table.th [] [ H.text "Spesifikasjon" ]
+                , Table.th [] [ H.text "Fra" ]
+                , Table.th [] [ H.text "Til" ]
+                ]
+        , tbody =
+            Table.tbody [] rows
+        }
 
 
 view : Model -> H.Html Msg
@@ -257,6 +320,9 @@ view model =
         neghours =
             numberInput NegHoursChanged (LabelText "Pause") (Maybe.map String.fromFloat model.negativeHours)
 
+        hourListDesc =
+            textInput HourListDescChanged (LabelText "Spesifikasjon") model.desc
+
         btnOk =
             button Save Success "Lagre" True
 
@@ -266,12 +332,11 @@ view model =
         btnNewInvoice =
             button (NewInvoiceMsgFor NewInvoiceDialog) Success "Ny faktura" True
 
-        btnGridItem : String -> String -> H.Html Msg
-        btnGridItem elmClass text =
-            gridItem (GridPosition "c2")
-                (H.div [ A.class "flex" ]
-                    [ btnOk
-                    , H.p [ A.class elmClass ] [ H.text text ]
+        statusHtml : String -> String -> H.Html Msg
+        statusHtml elmClass text =
+            gridItem (GridPosition "e2")
+                (H.div []
+                    [ H.p [ A.class elmClass ] [ H.text text ]
                     ]
                 )
 
@@ -285,22 +350,48 @@ view model =
                     , gridItem (GridPosition "e1") toHour
                     , gridItem (GridPosition "a2") hours
                     , gridItem (GridPosition "b2") neghours
-                    , gridItem (GridPosition "d2") btnNewGroup
-                    , gridItem (GridPosition "e2") btnNewInvoice
+                    , gridItem (GridPosition "c2") hourListDesc
+                    , gridItem (GridPosition "d2") (H.div [ A.class "flex" ] [ btnOk, btnNewGroup, btnNewInvoice ])
+                    , gridItem (GridPosition "f12") (curHourListItems model)
                     ]
             in
             case model.myStatus of
                 None ->
-                    gridItem (GridPosition "c2") btnOk
-                        :: itemsx
+                    itemsx
 
                 MyError err ->
-                    btnGridItem "elm-error" err
-                        :: itemsx
+                    statusHtml "elm-error" err :: itemsx
 
                 MySuccess s ->
-                    btnGridItem "elm-success" s
-                        :: itemsx
+                    statusHtml "elm-success" s :: itemsx
+
+        {-
+           let
+               itemsx =
+                   [ gridItem (GridPosition "a1") inv
+                   , gridItem (GridPosition "b1") hlg
+                   , gridItem (GridPosition "c1") dx
+                   , gridItem (GridPosition "d1") fromHour
+                   , gridItem (GridPosition "e1") toHour
+                   , gridItem (GridPosition "a2") hours
+                   , gridItem (GridPosition "b2") neghours
+                   , gridItem (GridPosition "c2") hourListDesc
+                   , gridItem (GridPosition "d2") (H.div [] [ btnOk, btnNewGroup, btnNewInvoice ])
+                   ]
+           in
+           case model.myStatus of
+               None ->
+                   gridItem (GridPosition "d2") btnOk
+                       :: itemsx
+
+               MyError err ->
+                   btnGridItem "elm-error" err
+                       :: itemsx
+
+               MySuccess s ->
+                   btnGridItem "elm-success" s
+                       :: itemsx
+        -}
     in
     H.div []
         [ H.div
@@ -502,6 +593,9 @@ update msg model =
                     String.toFloat s
             in
             ( { model | negativeHours = newNegH, resultHours = Maybe.map2 (\v1 v2 -> v1 - v2) model.hours newNegH }, Cmd.none )
+
+        HourListDescChanged s ->
+            ( { model | desc = Just s }, Cmd.none )
 
         InitDataFetched (Ok data) ->
             ( { model | invoices = data.invoices, hourlistGroups = data.hourlistGroups }, Cmd.none )

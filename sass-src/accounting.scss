@@ -3,7 +3,7 @@
   background-color: #FFFAF0;
   font-family: "Roboto","Helvetica Neue","Helvetica",Helvetica,Arial,sans-serif;
   font-size: 1.2em; 
-  margin-left: 1.0rem;
+  /*margin-left: 1.0rem;*/
 }
 
 .elm-error {
@@ -12,6 +12,10 @@
 
 .elm-ok {
   color: #0b0;
+}
+
+.elm-btn {
+  margin-right: 0.5rem;
 }
 
 @import "grid";
