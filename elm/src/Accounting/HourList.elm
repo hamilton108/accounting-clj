@@ -531,6 +531,11 @@ updateNewInvoice msg model =
             ( { model | myStatus = MyError (Util.httpErr2str err) }, Cmd.none )
 
 
+sumHourListItems : List HourListItem -> Float
+sumHourListItems items =
+    List.sum <| List.map .hours items
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
@@ -548,7 +553,11 @@ update msg model =
             ( { model | hourlistGroup = String.toInt s }, Cmd.none )
 
         HourListItemsFetched (Ok data) ->
-            ( { model | items = data }, Cmd.none )
+            let
+                sumMsg =
+                    "Sum timer: " ++ String.fromFloat (sumHourListItems data)
+            in
+            ( { model | items = data, myStatus = MySuccess sumMsg }, Cmd.none )
 
         HourListItemsFetched (Err err) ->
             ( { model | myStatus = MyError (Util.httpErr2str err) }, Cmd.none )
@@ -606,8 +615,8 @@ update msg model =
             ( model, saveToDb model )
 
         DataSaved (Ok status) ->
-            Debug.log "DataSaved"
-                ( { model | myStatus = MySuccess (String.fromInt status.oid) }, fetchHourListItems model )
+            --( { model | myStatus = MySuccess (String.fromInt status.oid) }, fetchHourListItems model )
+            ( model, fetchHourListItems model )
 
         DataSaved (Err err) ->
             ( { model | myStatus = MyError (Util.httpErr2str err) }, Cmd.none )
