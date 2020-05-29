@@ -60,6 +60,11 @@ saveNewGroupUrl =
     mainUrl ++ "/newgroup"
 
 
+fetchHourListItemsUrl : String
+fetchHourListItemsUrl =
+    mainUrl ++ "/hourlistitems"
+
+
 type alias InvoiceModel =
     { fnr : Maybe Int
     , invoiceDate : Maybe String
@@ -81,13 +86,14 @@ type alias InvoiceModel =
 
 
 type alias HourListItem =
-    { fnr : Int
+    { oid : Int
+    , fnr : Int
     , hdate : String
     , hours : Float
     , group : String
-    , desc : String
-    , fromHour : String
-    , toHour : String
+    , desc : Maybe String
+    , fromTime : String
+    , toTime : String
     }
 
 
@@ -102,7 +108,7 @@ type alias Model =
     , toHour : String
     , hours : Maybe Float
     , negativeHours : Maybe Float
-    , desc : Maybe String
+    , hdesc : Maybe String
     , resultHours : Maybe Float
     , myStatus : MyStatus
     , dlgNewGroup : DLG.DialogState
@@ -141,7 +147,8 @@ type NewInvoiceMsg
 
 type Msg
     = InvoiceChanged String
-    | HourlistGroupChanged String
+    | HourListGroupChanged String
+    | HourListItemsFetched (Result Http.Error (List HourListItem))
     | DateChanged String
     | FromHourChanged String
     | ToHourChanged String
@@ -227,7 +234,7 @@ init =
       , toHour = "16:00"
       , hours = Just 8
       , negativeHours = Just 0.0
-      , desc = Nothing
+      , hdesc = Nothing
       , resultHours = Just 8
       , myStatus = None
       , dlgNewGroup = DLG.DialogHidden
@@ -259,14 +266,18 @@ statusDecoder =
 
 hourListRow : HourListItem -> Table.Row Msg
 hourListRow r =
+    let
+        hdesc =
+            Maybe.withDefault "-" r.desc
+    in
     Table.tr []
         [ Table.td [] [ H.text (String.fromInt r.fnr) ]
         , Table.td [] [ H.text r.hdate ]
         , Table.td [] [ H.text (String.fromFloat r.hours) ]
         , Table.td [] [ H.text r.group ]
-        , Table.td [] [ H.text r.desc ]
-        , Table.td [] [ H.text r.fromHour ]
-        , Table.td [] [ H.text r.toHour ]
+        , Table.td [] [ H.text hdesc ]
+        , Table.td [] [ H.text r.fromTime ]
+        , Table.td [] [ H.text r.toTime ]
         ]
 
 
@@ -302,7 +313,7 @@ view model =
 
         hlg =
             --bootstrapSelect HourlistGroupChanged "Gruppe" model.hourlistGroups
-            makeSelect HourlistGroupChanged "Gruppe" model.hourlistGroups Nothing
+            makeSelect HourListGroupChanged "Gruppe" model.hourlistGroups Nothing
 
         dx =
             -- bootstrapDate "Dato"
@@ -321,7 +332,7 @@ view model =
             numberInput NegHoursChanged (LabelText "Pause") (Maybe.map String.fromFloat model.negativeHours)
 
         hourListDesc =
-            textInput HourListDescChanged (LabelText "Spesifikasjon") model.desc
+            textInput HourListDescChanged (LabelText "Spesifikasjon") model.hdesc
 
         btnOk =
             button Save Success "Lagre" True
@@ -364,34 +375,6 @@ view model =
 
                 MySuccess s ->
                     statusHtml "elm-success" s :: itemsx
-
-        {-
-           let
-               itemsx =
-                   [ gridItem (GridPosition "a1") inv
-                   , gridItem (GridPosition "b1") hlg
-                   , gridItem (GridPosition "c1") dx
-                   , gridItem (GridPosition "d1") fromHour
-                   , gridItem (GridPosition "e1") toHour
-                   , gridItem (GridPosition "a2") hours
-                   , gridItem (GridPosition "b2") neghours
-                   , gridItem (GridPosition "c2") hourListDesc
-                   , gridItem (GridPosition "d2") (H.div [] [ btnOk, btnNewGroup, btnNewInvoice ])
-                   ]
-           in
-           case model.myStatus of
-               None ->
-                   gridItem (GridPosition "d2") btnOk
-                       :: itemsx
-
-               MyError err ->
-                   btnGridItem "elm-error" err
-                       :: itemsx
-
-               MySuccess s ->
-                   btnGridItem "elm-success" s
-                       :: itemsx
-        -}
     in
     H.div []
         [ H.div
@@ -552,10 +535,23 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         InvoiceChanged s ->
-            ( { model | invoice = String.toInt s }, Cmd.none )
+            let
+                invoiceId =
+                    String.toInt s
 
-        HourlistGroupChanged s ->
+                newModel =
+                    { model | invoice = invoiceId }
+            in
+            ( newModel, fetchHourListItems newModel )
+
+        HourListGroupChanged s ->
             ( { model | hourlistGroup = String.toInt s }, Cmd.none )
+
+        HourListItemsFetched (Ok data) ->
+            ( { model | items = data }, Cmd.none )
+
+        HourListItemsFetched (Err err) ->
+            ( { model | myStatus = MyError (Util.httpErr2str err) }, Cmd.none )
 
         DateChanged s ->
             ( { model | dato = Just s }, Cmd.none )
@@ -595,7 +591,7 @@ update msg model =
             ( { model | negativeHours = newNegH, resultHours = Maybe.map2 (\v1 v2 -> v1 - v2) model.hours newNegH }, Cmd.none )
 
         HourListDescChanged s ->
-            ( { model | desc = Just s }, Cmd.none )
+            ( { model | hdesc = Just s }, Cmd.none )
 
         InitDataFetched (Ok data) ->
             ( { model | invoices = data.invoices, hourlistGroups = data.hourlistGroups }, Cmd.none )
@@ -610,7 +606,8 @@ update msg model =
             ( model, saveToDb model )
 
         DataSaved (Ok status) ->
-            ( { model | myStatus = MySuccess (String.fromInt status.oid) }, Cmd.none )
+            Debug.log "DataSaved"
+                ( { model | myStatus = MySuccess (String.fromInt status.oid) }, fetchHourListItems model )
 
         DataSaved (Err err) ->
             ( { model | myStatus = MyError (Util.httpErr2str err) }, Cmd.none )
@@ -669,6 +666,45 @@ fetchNewInvoiceData =
 setTodayDate : Cmd Msg
 setTodayDate =
     Task.perform SetTodayDate Time.now
+
+
+
+{-
+      type alias HourListItemsJson =
+          { items : List HourListItem
+          }
+   hourListItemsJsonDecoder : JD.Decoder HourListItemsJson
+   hourListItemsJsonDecoder =
+       JD.succeed HourListItemsJson
+           |> JP.required "items" (JD.list hourListItemDecoder)
+-}
+
+
+hourListItemDecoder : JD.Decoder HourListItem
+hourListItemDecoder =
+    JD.succeed HourListItem
+        |> JP.required "oid" JD.int
+        |> JP.required "fnr" JD.int
+        |> JP.required "hdate" JD.string
+        |> JP.required "hours" JD.float
+        |> JP.required "group" JD.string
+        |> JP.required "desc" (JD.nullable JD.string)
+        |> JP.required "fromtime" JD.string
+        |> JP.required "totime" JD.string
+
+
+fetchHourListItems : { r | invoice : Maybe Int } -> Cmd Msg
+fetchHourListItems model =
+    case model.invoice of
+        Nothing ->
+            Task.perform SaveToDbParamsInvalid (Task.succeed ())
+
+        Just invoice1 ->
+            let
+                myUrl =
+                    fetchHourListItemsUrl ++ "/" ++ String.fromInt invoice1
+            in
+            Http.send HourListItemsFetched <| Http.get myUrl (JD.list hourListItemDecoder)
 
 
 saveNewGroup : String -> Cmd Msg
@@ -733,6 +769,7 @@ saveToDb :
         , fromHour : String
         , toHour : String
         , hours : Maybe Float
+        , hdesc : Maybe String
     }
     -> Cmd Msg
 saveToDb model =
@@ -750,14 +787,22 @@ saveToDb model =
                                                 model.hours
                                                     |> Maybe.andThen
                                                         (\hours1 ->
-                                                            Just
-                                                                [ ( "fnr", JE.int invoice1 )
-                                                                , ( "group", JE.int hourlistGroup1 )
-                                                                , ( "curdate", JE.string dato1 )
-                                                                , ( "fromtime", JE.string model.fromHour )
-                                                                , ( "totime", JE.string model.toHour )
-                                                                , ( "hours", JE.float hours1 )
-                                                                ]
+                                                            let
+                                                                stem =
+                                                                    [ ( "fnr", JE.int invoice1 )
+                                                                    , ( "group", JE.int hourlistGroup1 )
+                                                                    , ( "curdate", JE.string dato1 )
+                                                                    , ( "fromtime", JE.string model.fromHour )
+                                                                    , ( "totime", JE.string model.toHour )
+                                                                    , ( "hours", JE.float hours1 )
+                                                                    ]
+                                                            in
+                                                            case model.hdesc of
+                                                                Nothing ->
+                                                                    Just stem
+
+                                                                Just desc1 ->
+                                                                    Just (( "desc", JE.string desc1 ) :: stem)
                                                         )
                                             )
                                 )

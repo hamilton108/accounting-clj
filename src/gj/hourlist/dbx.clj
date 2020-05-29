@@ -46,8 +46,8 @@
     (.insertInvoice ^HourlistFacade facade ib)))
 
 
-(defn fetch-last-5 [invoice]
-  (.selectLast5 facade invoice))
+(defn fetch-all [invoice]
+  (.selectAll facade invoice))
 
 (defn fetch-latest-invoice-num []
   (.lastInvoiceNum ^HourlistFacade facade))
@@ -60,7 +60,7 @@
     (.selectAll it (U/rs invoice))))
 
 
-(defn update-hourlist [fnr group curdate from_time to_time hours oid]
+(defn update-hourlist [fnr group desc curdate from_time to_time hours oid]
   (let [hb (HourlistBean.)]
     (doto hb
       (.setInvoiceNr (Integer. fnr))
@@ -69,6 +69,7 @@
       (.setFromTime from_time)
       (.setToTime to_time)
       (.setHours (Double. (float hours))))
+    (if (not (nil? desc)) (.setDescription hb desc))
     (if (nil? oid)
       (.insertHourlist facade hb)
       (do
