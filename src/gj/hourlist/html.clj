@@ -64,12 +64,20 @@
           hours (jr "hours")]
       (let [newEntry (DBX/update-hourlist fnr group desc curdate fromtime totime hours nil)]
         (U/json-response {:ok true :msg "Ok!" :oid (.getOid newEntry)}))))
+
   (POST "/newgroup" request 
     (let [jr (U/json-req-parse request)
           group (jr "name")]
-      (println jr)
       (let [newGroupBean (DBX/insert-hourlist-group group)]
         (U/json-response {:ok true :msg "Ok!" :oid (.getId newGroupBean)}))))
+
+  (POST "/fakturaposter" request 
+    (let [jr (U/json-req-parse request)
+          fnr (U/rs (jr "fnr"))
+          sum (U/rs (jr "sum"))]
+      (let [fp (DBX/insert-fakturaposter fnr sum)]
+        (U/json-response {:ok true :msg "Ok!" :oid (.getOid fp)}))))
+
   (POST "/insertinvoice" request 
     (let [jr (U/json-req-parse request)
           fnr (jr "fnr")
@@ -77,16 +85,15 @@
           duedate (LocalDate/parse (jr "duedate")) 
           desc (jr "desc")
           companyid (jr "companyid")]
-      (println jr)
       (let [newEntry (DBX/insert-invoice fnr date duedate desc companyid (tax-year))]
         (U/json-response {:ok true :msg "Ok!" :oid -1}))))
-  ;(GET "/hourlistitems" [fnr]
+
   (GET "/hourlistitems/:fnr" [fnr] 
     (U/json-response
        (hourlist-items fnr)))
+
   (GET "/newinvoice" []
     (U/json-response 
       (new-invoice))))
 
-      ;(U/json-response (DBX/fetch-last-5 fnr)))))
 

@@ -65,6 +65,11 @@ fetchHourListItemsUrl =
     mainUrl ++ "/hourlistitems"
 
 
+fakturaposterUrl : String
+fakturaposterUrl =
+    mainUrl ++ "/fakturaposter"
+
+
 type alias InvoiceModel =
     { fnr : Maybe Int
     , invoiceDate : Maybe String
@@ -162,6 +167,8 @@ type Msg
     | SaveToDbParamsInvalid ()
     | NewGroupMsgFor NewGroupMsg
     | NewInvoiceMsgFor NewInvoiceMsg
+    | Fakturaposter
+    | FakturaposterSaved (Result Http.Error JsonStatus)
 
 
 
@@ -343,6 +350,9 @@ view model =
         btnNewInvoice =
             button (NewInvoiceMsgFor NewInvoiceDialog) Success "Ny faktura" True
 
+        btnFakturaposter =
+            button Fakturaposter Success "Fakturaposter" True
+
         statusHtml : String -> String -> H.Html Msg
         statusHtml elmClass text =
             gridItem (GridPosition "e2")
@@ -362,7 +372,7 @@ view model =
                     , gridItem (GridPosition "a2") hours
                     , gridItem (GridPosition "b2") neghours
                     , gridItem (GridPosition "c2") hourListDesc
-                    , gridItem (GridPosition "d2") (H.div [ A.class "flex" ] [ btnOk, btnNewGroup, btnNewInvoice ])
+                    , gridItem (GridPosition "d2") (H.div [ A.class "flex" ] [ btnOk, btnNewGroup, btnNewInvoice, btnFakturaposter ])
                     , gridItem (GridPosition "f12") (curHourListItems model)
                     ]
             in
@@ -614,7 +624,7 @@ update msg model =
         Save ->
             ( model, saveToDb model )
 
-        DataSaved (Ok status) ->
+        DataSaved (Ok _) ->
             --( { model | myStatus = MySuccess (String.fromInt status.oid) }, fetchHourListItems model )
             ( model, fetchHourListItems model )
 
@@ -629,6 +639,15 @@ update msg model =
 
         NewInvoiceMsgFor invoiceMsg ->
             updateNewInvoice invoiceMsg model
+
+        Fakturaposter ->
+            ( model, saveToFakturaposter model )
+
+        FakturaposterSaved (Ok status) ->
+            ( model, Cmd.none )
+
+        FakturaposterSaved (Err err) ->
+            ( model, Cmd.none )
 
 
 selectItemDecoder : JD.Decoder SelectItem
@@ -728,6 +747,36 @@ saveNewGroup newGroup =
     in
     Http.send (NewGroupMsgFor << NewGroupSaved) <|
         Http.post saveNewGroupUrl jbody statusDecoder
+
+
+saveToFakturaposter :
+    { r
+        | invoice : Maybe Int
+        , items : List HourListItem
+    }
+    -> Cmd Msg
+saveToFakturaposter model =
+    let
+        params =
+            model.invoice
+                |> Maybe.andThen
+                    (\invoice1 ->
+                        Just
+                            [ ( "fnr", JE.int invoice1 )
+                            , ( "sum", JE.float (sumHourListItems model.items) )
+                            ]
+                    )
+    in
+    case params of
+        Nothing ->
+            Task.perform SaveToDbParamsInvalid (Task.succeed ())
+
+        Just params1 ->
+            let
+                jbody =
+                    Util.asHttpBody params1
+            in
+            Http.send FakturaposterSaved <| Http.post fakturaposterUrl jbody statusDecoder
 
 
 saveNewInvoice : InvoiceModel -> Cmd Msg
