@@ -16,6 +16,7 @@ import Accounting.Ui
         , textInput
         , timeInput
         )
+import Bootstrap.Form.Select as Select
 import Bootstrap.Table as Table
 import Common.DateUtil as DateUtil
 import Common.ModalDialog as DLG
@@ -147,6 +148,7 @@ type NewInvoiceMsg
 
 type Msg
     = InvoiceChanged String
+    | InvoiceChangedParamsInvalid ()
     | HourListGroupChanged String
     | HourListItemsFetched (Result Http.Error (List HourListItem))
     | DateChanged String
@@ -309,7 +311,15 @@ view model =
     let
         inv =
             -- bootstrapSelect InvoiceChanged "Fakturanr" model.invoices
-            makeSelect InvoiceChanged "Faktura" model.invoices Nothing
+            --makeSelect InvoiceChanged "Faktura" model.invoices Nothing
+            Select.select
+                [ Select.id "invoice"
+                , Select.onChange InvoiceChanged
+                ]
+                [ Select.item [ A.value "-" ] [ H.text "-" ]
+                , Select.item [ A.value "393" ] [ H.text "KDO" ]
+                , Select.item [ A.value "397" ] [ H.text "Edux" ]
+                ]
 
         hlg =
             --bootstrapSelect HourlistGroupChanged "Gruppe" model.hourlistGroups
@@ -547,7 +557,10 @@ update msg model =
                 newModel =
                     { model | invoice = invoiceId }
             in
-            ( newModel, fetchHourListItems newModel )
+            ( newModel, fetchHourListItems invoiceId )
+
+        InvoiceChangedParamsInvalid _ ->
+            ( { model | items = [] }, Cmd.none )
 
         HourListGroupChanged s ->
             ( { model | hourlistGroup = String.toInt s }, Cmd.none )
@@ -616,7 +629,7 @@ update msg model =
 
         DataSaved (Ok status) ->
             --( { model | myStatus = MySuccess (String.fromInt status.oid) }, fetchHourListItems model )
-            ( model, fetchHourListItems model )
+            ( model, fetchHourListItems model.invoice )
 
         DataSaved (Err err) ->
             ( { model | myStatus = MyError (Util.httpErr2str err) }, Cmd.none )
@@ -702,11 +715,11 @@ hourListItemDecoder =
         |> JP.required "totime" JD.string
 
 
-fetchHourListItems : { r | invoice : Maybe Int } -> Cmd Msg
-fetchHourListItems model =
-    case model.invoice of
+fetchHourListItems : Maybe Int -> Cmd Msg
+fetchHourListItems invoice =
+    case invoice of
         Nothing ->
-            Task.perform SaveToDbParamsInvalid (Task.succeed ())
+            Task.perform InvoiceChangedParamsInvalid (Task.succeed ())
 
         Just invoice1 ->
             let
