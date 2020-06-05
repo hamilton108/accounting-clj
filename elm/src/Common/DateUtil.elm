@@ -7,6 +7,9 @@ import Time exposing (Posix)
 todayISO8601 : Posix -> String
 todayISO8601 curTime =
     let
+        di =
+            Time.toDay Time.utc curTime
+
         y =
             String.fromInt <| Time.toYear Time.utc curTime
 
@@ -14,7 +17,11 @@ todayISO8601 curTime =
             monthStr <| Time.toMonth Time.utc curTime
 
         d =
-            String.fromInt <| Time.toDay Time.utc curTime
+            if di < 10 then
+                "0" ++ String.fromInt di
+
+            else
+                String.fromInt di
     in
     y ++ "-" ++ m ++ "-" ++ d
 

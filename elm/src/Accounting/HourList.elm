@@ -311,16 +311,18 @@ view model =
     let
         inv =
             -- bootstrapSelect InvoiceChanged "Fakturanr" model.invoices
-            --makeSelect InvoiceChanged "Faktura" model.invoices Nothing
-            Select.select
-                [ Select.id "invoice"
-                , Select.onChange InvoiceChanged
-                ]
-                [ Select.item [ A.value "-" ] [ H.text "-" ]
-                , Select.item [ A.value "393" ] [ H.text "KDO" ]
-                , Select.item [ A.value "397" ] [ H.text "Edux" ]
-                ]
+            makeSelect InvoiceChanged "Faktura" model.invoices Nothing
 
+        {-
+           Select.select
+               [ Select.id "invoice"
+               , Select.onChange InvoiceChanged
+               ]
+               [ Select.item [ A.value "-" ] [ H.text "-" ]
+               , Select.item [ A.value "393" ] [ H.text "KDO" ]
+               , Select.item [ A.value "397" ] [ H.text "Edux" ]
+               ]
+        -}
         hlg =
             --bootstrapSelect HourlistGroupChanged "Gruppe" model.hourlistGroups
             makeSelect HourListGroupChanged "Gruppe" model.hourlistGroups Nothing
