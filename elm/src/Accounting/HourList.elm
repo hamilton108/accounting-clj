@@ -114,7 +114,9 @@ type alias Model =
     , myStatus : MyStatus
     , dlgNewGroup : DLG.DialogState
     , dlgNewInvoice : DLG.DialogState
+    , dlgFakturaposter : DLG.DialogState
     , newInvoice : InvoiceModel
+    , fakturaposterModel : FakturaposterModel
     , items : List HourListItem
     }
 
@@ -146,6 +148,12 @@ type NewInvoiceMsg
     | NewInvoiceSaved (Result Http.Error JsonStatus)
 
 
+type FakturaposterMsg
+    = FakturaposterDialog
+    | FakturaposterOk
+    | FakturaposterCancel
+
+
 type Msg
     = InvoiceChanged String
     | InvoiceChangedParamsInvalid ()
@@ -164,6 +172,7 @@ type Msg
     | SaveToDbParamsInvalid ()
     | NewGroupMsgFor NewGroupMsg
     | NewInvoiceMsgFor NewInvoiceMsg
+    | FakturaposterMsgFor FakturaposterMsg
 
 
 
@@ -183,6 +192,16 @@ initInvoiceModel =
     , desc = ""
     , companyIds = []
     , companyId = Nothing
+    }
+
+
+initFakturaposterModel : FakturaposterModel
+initFakturaposterModel =
+    { fromDate = Nothing
+    , toDate = Nothing
+    , hours = 0.0
+    , hourRate = 810
+    , desc = "-"
     }
 
 
@@ -224,6 +243,11 @@ asInvoiceModelIn model invoice =
     { model | newInvoice = invoice }
 
 
+asFakturaposterModelIn : Model -> FakturaposterModel -> Model
+asFakturaposterModelIn model fm =
+    { model | fakturaposterModel = fm }
+
+
 init : ( Model, Cmd Msg )
 init =
     ( { invoices = []
@@ -241,7 +265,9 @@ init =
       , myStatus = None
       , dlgNewGroup = DLG.DialogHidden
       , dlgNewInvoice = DLG.DialogHidden
+      , dlgFakturaposter = DLG.DialogHidden
       , newInvoice = initInvoiceModel
+      , fakturaposterModel = initFakturaposterModel
       , items = []
       }
     , Cmd.batch [ setTodayDate, fetchInitData ]
@@ -355,6 +381,9 @@ view model =
         btnNewInvoice =
             button (NewInvoiceMsgFor NewInvoiceDialog) Success "Ny faktura" True
 
+        btnFakturaposter =
+            button (FakturaposterMsgFor FakturaposterDialog) Success "Fakturaposter" True
+
         statusHtml : String -> String -> H.Html Msg
         statusHtml elmClass text =
             gridItem (GridPosition "e2")
@@ -374,7 +403,7 @@ view model =
                     , gridItem (GridPosition "a2") hours
                     , gridItem (GridPosition "b2") neghours
                     , gridItem (GridPosition "c2") hourListDesc
-                    , gridItem (GridPosition "d2") (H.div [ A.class "flex" ] [ btnOk, btnNewGroup, btnNewInvoice ])
+                    , gridItem (GridPosition "d2") (H.div [ A.class "flex" ] [ btnOk, btnNewGroup, btnNewInvoice, btnFakturaposter ])
                     , gridItem (GridPosition "f12") (curHourListItems model)
                     ]
             in
@@ -394,6 +423,7 @@ view model =
             items
         , newGroupDialog model
         , newInvoiceDialog model
+        , fakturaposterDialog model
         ]
 
 
@@ -436,6 +466,52 @@ newGroupDialog model =
         (NewGroupMsgFor NewGroupOk)
         (NewGroupMsgFor NewGroupCancel)
         [ newGroupInput ]
+
+
+
+{-
+    oid |    dato    | sluttdato  | fakturanr | antall | enh_sats |  enh  |     spesifikasjon
+   -----+------------+------------+-----------+--------+----------+-------+-----------------------
+      1 | 2006-09-25 | 2006-10-01 |       146 |  40.00 |   500.00 | timer | Konsulenttimer uke 39
+      5 | 2006-07-15 | 2006-09-30 |       147 |  60.00 |   420.00 | timer | HBMN Fase 2
+      2 | 2006-10-02 | 2006-10-08 |       146 |  38.50 |   500.00 | timer | Konsulenttimer uke 40
+-}
+
+
+type alias FakturaposterModel =
+    { fromDate : Maybe String
+    , toDate : Maybe String
+    , hours : Float
+    , hourRate : Int
+    , desc : String
+    }
+
+
+fakturaposterDialog : Model -> H.Html Msg
+fakturaposterDialog model =
+    let
+        myModel =
+            model.fakturaposterModel
+
+        title =
+            case model.invoice of
+                Nothing ->
+                    "Fakturaposter"
+
+                Just t ->
+                    "Fakturaposter: " ++ String.fromInt t
+
+        fromDate =
+            dateInput (NewInvoiceMsgFor << InvDateChanged) (LabelText "Fra dato") myModel.fromDate
+
+        toDate =
+            dateInput (NewInvoiceMsgFor << InvDateChanged) (LabelText "Til dato") myModel.toDate
+    in
+    DLG.modalDialog title
+        model.dlgFakturaposter
+        (FakturaposterMsgFor FakturaposterOk)
+        (FakturaposterMsgFor FakturaposterCancel)
+        [ fromDate, toDate ]
 
 
 calcHours : String -> String -> Float
@@ -543,6 +619,19 @@ updateNewInvoice msg model =
             ( { model | myStatus = MyError (Util.httpErr2str err) }, Cmd.none )
 
 
+updateFakturaposter : FakturaposterMsg -> Model -> ( Model, Cmd Msg )
+updateFakturaposter msg model =
+    case msg of
+        FakturaposterDialog ->
+            ( { model | dlgFakturaposter = DLG.DialogVisible }, Cmd.none )
+
+        FakturaposterOk ->
+            ( { model | dlgFakturaposter = DLG.DialogHidden }, Cmd.none )
+
+        FakturaposterCancel ->
+            ( { model | dlgFakturaposter = DLG.DialogHidden }, Cmd.none )
+
+
 sumHourListItems : List HourListItem -> Float
 sumHourListItems items =
     List.sum <| List.map .hours items
@@ -644,6 +733,9 @@ update msg model =
 
         NewInvoiceMsgFor invoiceMsg ->
             updateNewInvoice invoiceMsg model
+
+        FakturaposterMsgFor fakturaposterMsg ->
+            updateFakturaposter fakturaposterMsg model
 
 
 selectItemDecoder : JD.Decoder SelectItem
