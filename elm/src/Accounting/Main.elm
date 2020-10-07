@@ -103,9 +103,12 @@ isActive { link, page } =
             False
 
 
-viewFooter : H.Html msg
-viewFooter =
-    H.footer [] [ H.text "One is never alone with a rubber duck. -Douglas Adams" ]
+
+{-
+   viewFooter : H.Html msg
+   viewFooter =
+       H.footer [] [ H.text "One is never alone with a rubber duck. -Douglas Adams" ]
+-}
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )

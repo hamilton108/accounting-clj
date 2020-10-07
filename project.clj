@@ -12,7 +12,7 @@
                  [selmer "1.12.18"]
                  [rcstadheim/accounting-repos "1.7.2"]
                  [cheshire "5.10.0"]]
-  :repositories {"project" "file:repo"}
+  :repositories {"project" "file:/home/rcs/opt/java/mavenlocalrepo"}
   :resource-paths [
 		;"/home/rcs/opt/java/accounting-repos/build/libs/accounting-repos-1.2.0.jar"
         "resources"]
