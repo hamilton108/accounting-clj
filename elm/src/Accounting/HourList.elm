@@ -56,6 +56,11 @@ saveNewInvoiceUrl =
     mainUrl ++ "/insertinvoice"
 
 
+saveFakturaposterUrl : String
+saveFakturaposterUrl =
+    mainUrl ++ "/savefakturaposter"
+
+
 saveNewGroupUrl : String
 saveNewGroupUrl =
     mainUrl ++ "/newgroup"
@@ -64,6 +69,15 @@ saveNewGroupUrl =
 fetchHourListItemsUrl : String
 fetchHourListItemsUrl =
     mainUrl ++ "/hourlistitems"
+
+
+type alias FakturaposterModel =
+    { fromDate : Maybe String
+    , toDate : Maybe String
+    , hours : Float
+    , hourRate : Int
+    , desc : String
+    }
 
 
 type alias InvoiceModel =
@@ -152,6 +166,12 @@ type FakturaposterMsg
     = FakturaposterDialog
     | FakturaposterOk
     | FakturaposterCancel
+    | FromDateChanged String
+    | ToDateChanged String
+    | InvoiceHoursChanged String
+    | HourRateChanged String
+    | InvoiceDescChanged String
+    | FakturaposterSaved (Result Http.Error JsonStatus)
 
 
 type Msg
@@ -228,6 +248,31 @@ setDueDate s model =
 setCompanyId : String -> InvoiceModel -> InvoiceModel
 setCompanyId s model =
     { model | companyId = String.toInt s }
+
+
+setFromDate : String -> FakturaposterModel -> FakturaposterModel
+setFromDate s model =
+    { model | fromDate = Just s }
+
+
+setToDate : String -> FakturaposterModel -> FakturaposterModel
+setToDate s model =
+    { model | toDate = Just s }
+
+
+setInvoiceHours : String -> FakturaposterModel -> FakturaposterModel
+setInvoiceHours s model =
+    { model | hours = Maybe.withDefault 0.0 (String.toFloat s) }
+
+
+setHourRate : String -> FakturaposterModel -> FakturaposterModel
+setHourRate s model =
+    { model | hourRate = Maybe.withDefault 0 (String.toInt s) }
+
+
+setInvoiceDesc : String -> FakturaposterModel -> FakturaposterModel
+setInvoiceDesc s model =
+    { model | desc = s }
 
 
 
@@ -478,15 +523,6 @@ newGroupDialog model =
 -}
 
 
-type alias FakturaposterModel =
-    { fromDate : Maybe String
-    , toDate : Maybe String
-    , hours : Float
-    , hourRate : Int
-    , desc : String
-    }
-
-
 fakturaposterDialog : Model -> H.Html Msg
 fakturaposterDialog model =
     let
@@ -502,16 +538,25 @@ fakturaposterDialog model =
                     "Fakturaposter: " ++ String.fromInt t
 
         fromDate =
-            dateInput (NewInvoiceMsgFor << InvDateChanged) (LabelText "Fra dato") myModel.fromDate
+            dateInput (FakturaposterMsgFor << FromDateChanged) (LabelText "Fra dato") myModel.fromDate
 
         toDate =
-            dateInput (NewInvoiceMsgFor << InvDateChanged) (LabelText "Til dato") myModel.toDate
+            dateInput (FakturaposterMsgFor << ToDateChanged) (LabelText "Til dato") myModel.toDate
+
+        hours =
+            numberInput (FakturaposterMsgFor << InvoiceHoursChanged) (LabelText "Timer") (Just <| String.fromFloat myModel.hours)
+
+        hourRate =
+            numberInput (FakturaposterMsgFor << HourRateChanged) (LabelText "Timesats") (Just <| String.fromInt myModel.hourRate)
+
+        desc =
+            textInput (FakturaposterMsgFor << InvoiceDescChanged) (LabelText "Spesifikasjon") (Just myModel.desc)
     in
     DLG.modalDialog title
         model.dlgFakturaposter
         (FakturaposterMsgFor FakturaposterOk)
         (FakturaposterMsgFor FakturaposterCancel)
-        [ fromDate, toDate ]
+        [ fromDate, toDate, hours, hourRate, desc ]
 
 
 calcHours : String -> String -> Float
@@ -626,10 +671,31 @@ updateFakturaposter msg model =
             ( { model | dlgFakturaposter = DLG.DialogVisible }, Cmd.none )
 
         FakturaposterOk ->
-            ( { model | dlgFakturaposter = DLG.DialogHidden }, Cmd.none )
+            ( { model | dlgFakturaposter = DLG.DialogHidden }, saveFakturaposter model.fakturaposterModel )
 
         FakturaposterCancel ->
             ( { model | dlgFakturaposter = DLG.DialogHidden }, Cmd.none )
+
+        FromDateChanged s ->
+            ( model.fakturaposterModel |> setFromDate s |> asFakturaposterModelIn model, Cmd.none )
+
+        ToDateChanged s ->
+            ( model.fakturaposterModel |> setToDate s |> asFakturaposterModelIn model, Cmd.none )
+
+        InvoiceHoursChanged s ->
+            ( model.fakturaposterModel |> setInvoiceHours s |> asFakturaposterModelIn model, Cmd.none )
+
+        HourRateChanged s ->
+            ( model.fakturaposterModel |> setHourRate s |> asFakturaposterModelIn model, Cmd.none )
+
+        InvoiceDescChanged s ->
+            ( model.fakturaposterModel |> setInvoiceDesc s |> asFakturaposterModelIn model, Cmd.none )
+
+        FakturaposterSaved (Ok _) ->
+            ( model, Cmd.none )
+
+        FakturaposterSaved (Err err) ->
+            ( { model | myStatus = MyError (Util.httpErr2str err) }, Cmd.none )
 
 
 sumHourListItems : List HourListItem -> Float
@@ -835,6 +901,38 @@ saveNewGroup newGroup =
     in
     Http.send (NewGroupMsgFor << NewGroupSaved) <|
         Http.post saveNewGroupUrl jbody statusDecoder
+
+
+saveFakturaposter : FakturaposterModel -> Cmd Msg
+saveFakturaposter model =
+    let
+        params =
+            model.fromDate
+                |> Maybe.andThen
+                    (\fromDate1 ->
+                        model.toDate
+                            |> Maybe.andThen
+                                (\toDate1 ->
+                                    Just
+                                        [ ( "fromdate", JE.string fromDate1 )
+                                        , ( "todate", JE.string toDate1 )
+                                        , ( "hours", JE.float model.hours )
+                                        , ( "hourrate", JE.int model.hourRate )
+                                        , ( "desc", JE.string model.desc )
+                                        ]
+                                )
+                    )
+    in
+    case params of
+        Nothing ->
+            Task.perform SaveToDbParamsInvalid (Task.succeed ())
+
+        Just params1 ->
+            let
+                jbody =
+                    Util.asHttpBody params1
+            in
+            Http.send (FakturaposterMsgFor << FakturaposterSaved) <| Http.post saveFakturaposterUrl jbody statusDecoder
 
 
 saveNewInvoice : InvoiceModel -> Cmd Msg
