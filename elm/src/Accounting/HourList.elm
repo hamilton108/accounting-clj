@@ -380,9 +380,17 @@ curHourListItems model =
 view : Model -> H.Html Msg
 view model =
     let
+        selectedInvoice =
+            case model.invoice of
+                Nothing ->
+                    Nothing
+
+                Just i ->
+                    Just <| String.fromInt i
+
         inv =
             -- bootstrapSelect InvoiceChanged "Fakturanr" model.invoices
-            makeSelect InvoiceChanged "Faktura" model.invoices Nothing
+            makeSelect InvoiceChanged "Faktura" model.invoices selectedInvoice
 
         {-
            Select.select
