@@ -1,32 +1,32 @@
 (ns gj.hourlist.dbx
   (:import
-    [accountingrepos.dto
-      InvoiceBean
-      HourlistBean
-      HourlistGroupBean]
-    [accountingrepos.mybatis
-      HourlistFacade])
+   [accountingrepos.dto
+    InvoiceBean
+    HourlistBean
+    HourlistGroupBean
+    FakturaposterBean]
+   [accountingrepos.mybatis
+    HourlistFacade])
   (:require
-    [gj.service.htmlutils :as U]
-    [gj.service.db :as DB]))
-
+   [gj.service.htmlutils :as U]
+   [gj.service.db :as DB]))
 
 (def facade (HourlistFacade.))
 
 (comment fetch-group-sums [invoice]
-  (DB/with-session :koteriku HourlistGroupMapper
-    (let [result (.selectGroupBySpec it (U/rs invoice))
-          sumTotalBean (HourlistGroupBean.)]
+         (DB/with-session :koteriku HourlistGroupMapper
+           (let [result (.selectGroupBySpec it (U/rs invoice))
+                 sumTotalBean (HourlistGroupBean.)]
 
-      (doto sumTotalBean
-        (.setDescription "Sum total:")
-        (.setSumHours (reduce + (map #(.getSumHours %) result))))
-      (.add result sumTotalBean)
-      result)))
+             (doto sumTotalBean
+               (.setDescription "Sum total:")
+               (.setSumHours (reduce + (map #(.getSumHours %) result))))
+             (.add result sumTotalBean)
+             result)))
 
 (comment toggle-group-isactive [oid is-active]
-  (DB/with-session :koteriku HourlistGroupMapper
-                             (.toggleGroup it oid is-active)))
+         (DB/with-session :koteriku HourlistGroupMapper
+           (.toggleGroup it oid is-active)))
 
 (defn fetch-hourlist-groups [show-inactive]
   (.selectHourlistGroups ^HourlistFacade facade show-inactive))
@@ -45,6 +45,17 @@
       (.setTaxYear taxyear))
     (.insertInvoice ^HourlistFacade facade ib)))
 
+(defn insert-fakturaposter [fnr fromdate todate hours hourrate desc]
+  (let [fb (FakturaposterBean.)]
+    (doto fb
+      (.setInvoiceNr fnr)
+      (.setFromDate fromdate)
+      (.setToDate todate)
+      (.setUnit "timer")
+      (.setAmount hours)
+      (.setUnitRate hourrate)
+      (.setDescription desc))
+    (.insertFakturaposter ^FakturaposterBean facade fb)))
 
 (defn fetch-all [invoice]
   (.selectAll facade invoice))
@@ -56,9 +67,8 @@
   (.selectCompanies ^HourlistFacade facade))
 
 (comment fetch-all [invoice]
-  (DB/with-session :koteriku HourlistMapper
-    (.selectAll it (U/rs invoice))))
-
+         (DB/with-session :koteriku HourlistMapper
+           (.selectAll it (U/rs invoice))))
 
 (defn update-hourlist [fnr group desc curdate from_time to_time hours oid]
   (let [hb (HourlistBean.)]

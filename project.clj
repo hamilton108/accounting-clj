@@ -1,4 +1,4 @@
-(defproject accounting-clj "1.7.2"
+(defproject accounting-clj "1.8.0"
   :description "FIXME: write description"
   :url "http://example.com/FIXME"
   :license {:name "EPL-2.0 OR GPL-2.0-or-later WITH Classpath-exception-2.0"
@@ -7,16 +7,15 @@
                  [ring "1.8.0"]
                  [compojure "1.6.1"]
                  [ring/ring-jetty-adapter "1.8.0"]
-		         [org.mybatis/mybatis "3.5.4"]
-		         [org.postgresql/postgresql "42.2.10"]
+                 [org.mybatis/mybatis "3.5.4"]
+                 [org.postgresql/postgresql "42.2.10"]
                  [selmer "1.12.18"]
-                 [rcstadheim/accounting-repos "1.7.2"]
+                 [rcstadheim/accounting-repos "1.8.3"]
                  [cheshire "5.10.0"]]
   :repositories {"project" "file:/home/rcs/opt/java/mavenlocalrepo"}
-  :resource-paths [
-		;"/home/rcs/opt/java/accounting-repos/build/libs/accounting-repos-1.2.0.jar"
-        "resources"]
-  :main ^:skip-aot gj.webapp 
+  :resource-paths [;"/home/rcs/opt/java/accounting-repos/build/libs/accounting-repos-1.2.0.jar"
+                   "resources"]
+  :main ^:skip-aot gj.webapp
   ;:manifest {"Class-Path" "accounting-repos-1.0.jar"}
   :target-path "target/%s"
   :plugins [[lein-ring "0.12.5"]]

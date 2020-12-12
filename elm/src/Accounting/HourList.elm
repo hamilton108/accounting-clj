@@ -679,7 +679,7 @@ updateFakturaposter msg model =
             ( { model | dlgFakturaposter = DLG.DialogVisible }, Cmd.none )
 
         FakturaposterOk ->
-            ( { model | dlgFakturaposter = DLG.DialogHidden }, saveFakturaposter model.fakturaposterModel )
+            ( { model | dlgFakturaposter = DLG.DialogHidden }, saveFakturaposter model.invoice model.fakturaposterModel )
 
         FakturaposterCancel ->
             ( { model | dlgFakturaposter = DLG.DialogHidden }, Cmd.none )
@@ -911,23 +911,28 @@ saveNewGroup newGroup =
         Http.post saveNewGroupUrl jbody statusDecoder
 
 
-saveFakturaposter : FakturaposterModel -> Cmd Msg
-saveFakturaposter model =
+saveFakturaposter : Maybe Int -> FakturaposterModel -> Cmd Msg
+saveFakturaposter fnr model =
     let
         params =
-            model.fromDate
+            fnr
                 |> Maybe.andThen
-                    (\fromDate1 ->
-                        model.toDate
+                    (\fnr1 ->
+                        model.fromDate
                             |> Maybe.andThen
-                                (\toDate1 ->
-                                    Just
-                                        [ ( "fromdate", JE.string fromDate1 )
-                                        , ( "todate", JE.string toDate1 )
-                                        , ( "hours", JE.float model.hours )
-                                        , ( "hourrate", JE.int model.hourRate )
-                                        , ( "desc", JE.string model.desc )
-                                        ]
+                                (\fromDate1 ->
+                                    model.toDate
+                                        |> Maybe.andThen
+                                            (\toDate1 ->
+                                                Just
+                                                    [ ( "fnr", JE.int fnr1 )
+                                                    , ( "fromdate", JE.string fromDate1 )
+                                                    , ( "todate", JE.string toDate1 )
+                                                    , ( "hours", JE.float model.hours )
+                                                    , ( "hourrate", JE.int model.hourRate )
+                                                    , ( "desc", JE.string model.desc )
+                                                    ]
+                                            )
                                 )
                     )
     in
