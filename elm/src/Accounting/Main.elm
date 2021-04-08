@@ -22,6 +22,11 @@ import Url.Parser as Parser exposing (Parser, s)
 --import Url.Parser as Parser exposing ((</>), Parser, s, string)
 
 
+title : String
+title =
+    "Accounting SPA - 1.9"
+
+
 type alias Flags =
     Int
 
@@ -60,7 +65,7 @@ view model =
                 NotFound ->
                     H.text "No page selected"
     in
-    { title = "Accounting SPA"
+    { title = title
     , body =
         [ viewHeader model.page, content ]
     }
@@ -70,7 +75,7 @@ viewHeader : Page -> H.Html Msg
 viewHeader page =
     let
         logo =
-            H.h1 [] [ H.text "Accounting" ]
+            H.h1 [] [ H.text title ]
 
         links =
             H.ul []

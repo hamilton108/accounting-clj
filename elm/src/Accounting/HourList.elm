@@ -209,7 +209,7 @@ initInvoiceModel =
     { fnr = Nothing
     , invoiceDate = Nothing
     , dueDate = Nothing
-    , desc = ""
+    , desc = "IF Fornebu (EVRY)"
     , companyIds = []
     , companyId = Nothing
     }
@@ -221,7 +221,7 @@ initFakturaposterModel =
     , toDate = Nothing
     , hours = 0.0
     , hourRate = 810
-    , desc = "-"
+    , desc = "Konsulentbistand - utvikling"
     }
 
 
@@ -381,12 +381,7 @@ view : Model -> H.Html Msg
 view model =
     let
         selectedInvoice =
-            case model.invoice of
-                Nothing ->
-                    Nothing
-
-                Just i ->
-                    Just <| String.fromInt i
+            Maybe.map String.fromInt model.invoice
 
         inv =
             -- bootstrapSelect InvoiceChanged "Fakturanr" model.invoices
