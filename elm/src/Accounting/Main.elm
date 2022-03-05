@@ -24,7 +24,7 @@ import Url.Parser as Parser exposing (Parser, s)
 
 title : String
 title =
-    "Accounting SPA - 1.9"
+    "Accounting SPA - 1.9.1"
 
 
 type alias Flags =

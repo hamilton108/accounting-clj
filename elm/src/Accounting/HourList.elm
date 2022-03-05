@@ -220,7 +220,7 @@ initFakturaposterModel =
     { fromDate = Nothing
     , toDate = Nothing
     , hours = 0.0
-    , hourRate = 810
+    , hourRate = 851
     , desc = "Konsulentbistand - utvikling"
     }
 
