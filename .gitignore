@@ -1,4 +1,4 @@
-/target
+target
 /classes
 /checkouts
 profiles.clj
@@ -20,3 +20,6 @@ repo
 repo/
 repo.x/
 accounting.css.map
+.cache/
+.spago/
+purescript/output/

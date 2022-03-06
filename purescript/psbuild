@@ -1,0 +1,11 @@
+#!/bin/bash
+
+BUILD_TARGET="dev/ps-accounting.js"
+
+spago bundle-app --to $BUILD_TARGET
+
+cp $BUILD_TARGET ../resources/public/js/ps-accounting.js
+
+# sed -i '$ d' dev/ps-main.js
+
+exit 0
