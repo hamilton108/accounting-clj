@@ -18,10 +18,12 @@ import Data.Argonaut.Decode as Decode
 import Data.Argonaut.Decode.Error (JsonDecodeError)
 
 import Data.Either (Either(..))
+import Data.Maybe (Maybe(..))
 
 import Halogen as H
 import Halogen.HTML.Properties as HP
 import Halogen.HTML as HH
+import Halogen.HTML (ClassName(..))
 
 import Accounting.UI as UI
 import Accounting.UI ( SelectItems
@@ -100,18 +102,40 @@ component =
 render :: forall cs m. State -> H.ComponentHTML Action cs m
 render state =
   let 
-    fetchInvBtn = UI.gridItem (GridPosition "a1") (UI.mkButton (Title "Hent faktura") FetchInvoices)
-    msg = UI.gridItem (GridPosition "a2") (HH.p_ [ HH.text state.msg ])
-    inv = UI.gridItem (GridPosition "b1") (UI.mkSelect (Title "Faktura") state.invoices SelectChange)
-    txt = UI.gridItem (GridPosition "b2") (UI.mkInput (Title "Msg") InputText SelectChange)
+    inv = UI.gridItem (GridPosition "a1") (UI.mkSelect (Title "Faktura") state.invoices SelectChange)
+    hours = UI.gridItem (GridPosition "a2") (UI.mkInput (Title "Timer") InputNumber SelectChange Nothing)
+    groups = UI.gridItem (GridPosition "b1") (UI.mkSelect (Title "Gruppe") state.hourlistGroups SelectChange)
+    break = UI.gridItem (GridPosition "b2") (UI.mkInput (Title "Pause") InputNumber SelectChange Nothing)
+    date = UI.gridItem (GridPosition "c1") (UI.mkInput (Title "Dato") InputDate SelectChange Nothing)
+    spec = UI.gridItem (GridPosition "c2") (UI.mkInput (Title "Spesifikasjon") InputText SelectChange Nothing)
+    from = UI.gridItem (GridPosition "d1") (UI.mkInput (Title "Fra") InputTime SelectChange Nothing)
+    to = UI.gridItem (GridPosition "e1") (UI.mkInput (Title "Til") InputTime SelectChange Nothing)
+
+    --fetchInvBtn = UI.gridItem (GridPosition "d2") (UI.mkButton (Title "Hent faktura") FetchInvoices)
+    btnInit = UI.mkButton (Title "Hent faktura") FetchInvoices
+    btnOk = UI.mkButton (Title "Lagre") FetchInvoices
+    btnNewGroup = UI.mkButton (Title "Ny gruppe") FetchInvoices
+    btnNewInvoice = UI.mkButton (Title "Ny faktura") FetchInvoices
+    btnFakturaposter = UI.mkButton (Title "Fakturaposter") FetchInvoices
+
+    buttons = UI.gridItem (GridPosition "d2") (HH.div [ HP.classes [ ClassName "flex"] ] [ btnOk, btnNewGroup, btnNewInvoice, btnFakturaposter, btnInit ])
+    
+
+    msg = UI.gridItem (GridPosition "e2") (HH.p_ [ HH.text state.msg ])
     --cb = UI.gridItem (GridPosition "b2") (UI.mkCheckbox (Title "Demo") CbChange)
   in
   HH.div 
     [ HP.classes [ HH.ClassName "accounting-grid" ]]
     [ inv 
-    , txt
+    , hours
+    , groups
+    , break
+    , date
+    , spec
+    , from 
+    , to
     , msg
-    , fetchInvBtn 
+    , buttons
     ]
 
 handleAction :: forall cs o m. MonadAff m => Action -> H.HalogenM State Action cs o m Unit

@@ -2,6 +2,8 @@ module Accounting.UI where
 
 import Prelude
 
+import Data.Array ((:))
+import Data.Maybe (Maybe(..))
 import DOM.HTML.Indexed.InputType ( InputType(..) )
 import Web.UIEvent.MouseEvent ( MouseEvent )
 --import Web.Event.Event (Event)
@@ -20,12 +22,18 @@ newtype GridPosition =
 newtype Title = 
   Title String
 
+newtype InputVal = 
+  InputVal String
+
 type SelectItem = 
   { v :: String
   , t :: String 
   }
 
 type SelectItems = Array SelectItem
+
+emptySelectItem :: SelectItem
+emptySelectItem = { v: "0", t: "-" }
 
 gridItem :: forall w i. GridPosition -> HTML w i -> HTML w i
 gridItem (GridPosition clazz) item =
@@ -47,7 +55,7 @@ mkOption item =
 mkSelect_ :: forall w i. SelectItems -> (String -> i) -> HTML w i
 mkSelect_ items evt = 
   let 
-    opts = map mkOption items
+    opts = map mkOption (emptySelectItem : items)
   in
   HH.select
     [ HP.classes [ ClassName "form-control" ]
@@ -65,20 +73,31 @@ mkSelect (Title title) items evt =
     , sel
     ]
 
-mkInput_ :: forall w i. InputType -> (String -> i) -> HTML w i
-mkInput_ inpType evt = 
-  HH.input 
-    [ HP.type_ inpType --IP.InputText
-    , HP.classes 
-      [ ClassName "form-control"
-      ]
-    , HE.onValueChange evt
-    ]
+mkInput_ :: forall w i. InputType -> (String -> i) -> Maybe InputVal -> HTML w i
+mkInput_ inpType evt val = 
+  case val of
+    Nothing ->
+      HH.input 
+        [ HP.type_ inpType 
+        , HP.classes 
+          [ ClassName "form-control"
+          ]
+        , HE.onValueChange evt
+        ]
+    Just (InputVal val1) -> 
+      HH.input 
+        [ HP.type_ inpType 
+        , HP.classes 
+          [ ClassName "form-control"
+          ]
+        , HP.value val1
+        , HE.onValueChange evt
+        ]
 
-mkInput :: forall w i. Title -> InputType -> (String -> i) -> HTML w i
-mkInput (Title title) inpType evt = 
+mkInput :: forall w i. Title -> InputType -> (String -> i) -> Maybe InputVal -> HTML w i
+mkInput (Title title) inpType evt val = 
   let 
-    inp = mkInput_ inpType evt
+    inp = mkInput_ inpType evt val
   in
   HH.span [ HP.classes [ ClassName "form-group" ]]
     [ HH.label [] [ HH.text title ]

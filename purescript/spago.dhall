@@ -4,6 +4,7 @@
     , "affjax"
     , "argonaut-codecs"
     , "argonaut-core"
+    , "arrays"
     , "console"
     , "dom-indexed"
     , "effect"
