@@ -1,14 +1,17 @@
 module Accounting.UI where
 
 import Prelude
+
+import DOM.HTML.Indexed.InputType ( InputType(..) )
+import Web.UIEvent.MouseEvent ( MouseEvent )
+--import Web.Event.Event (Event)
+
 import Halogen.HTML.Properties as HP
 import Halogen.HTML as HH
 import Halogen.HTML ( HTML
                     , ClassName(..)
                     )
 import Halogen.HTML.Events as HE
-import DOM.HTML.Indexed.InputType ( InputType(..) )
-import Web.UIEvent.MouseEvent as ME
 
 
 newtype GridPosition = 
@@ -18,21 +21,30 @@ newtype Title =
   Title String
 
 type SelectItem = 
-  { val :: String
-  , tx :: String 
+  { v :: String
+  , t :: String 
   }
+
+type SelectItems = Array SelectItem
 
 gridItem :: forall w i. GridPosition -> HTML w i -> HTML w i
 gridItem (GridPosition clazz) item =
   HH.div [ HP.classes [ ClassName clazz ]] [item ]
 
+{-
+defaultEventHandling :: Event.Event -> Effect Unit
+defaultEventHandling event = 
+    Event.stopPropagation event *>
+    Event.preventDefault event 
+-}
+
 mkOption :: forall w i. SelectItem -> HTML w i
 mkOption item = 
   HH.option 
-    [ HP.value item.val ] 
-    [ HH.text item.tx ]
+    [ HP.value item.v ] 
+    [ HH.text item.t ]
 
-mkSelect_ :: forall w i. Array SelectItem -> (String -> i) -> HTML w i
+mkSelect_ :: forall w i. SelectItems -> (String -> i) -> HTML w i
 mkSelect_ items evt = 
   let 
     opts = map mkOption items
@@ -43,7 +55,7 @@ mkSelect_ items evt =
     ]
     opts
 
-mkSelect :: forall w i. Title -> Array SelectItem -> (String -> i) -> HTML w i
+mkSelect :: forall w i. Title -> SelectItems -> (String -> i) -> HTML w i
 mkSelect (Title title) items evt = 
   let 
     sel = mkSelect_ items evt
@@ -97,7 +109,7 @@ mkCheckbox (Title title) evt =
     ]
 
 
-mkButton :: forall w i. Title -> (ME.MouseEvent -> i) -> HTML w i
+mkButton :: forall w i. Title -> (MouseEvent -> i) -> HTML w i
 mkButton (Title title) evt = 
   HH.button
     [ HE.onClick evt
