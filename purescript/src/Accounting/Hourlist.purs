@@ -6,6 +6,8 @@ import Effect.Aff.Class (class MonadAff)
 --import Effect.Aff (launchAff_)
 import Affjax as Affjax
 import Affjax.ResponseFormat as ResponseFormat
+import Affjax.RequestBody (RequestBody)
+import Affjax.RequestBody as REQB
 
 import DOM.HTML.Indexed.InputType (InputType(..))
 import Web.UIEvent.MouseEvent (MouseEvent)
@@ -14,8 +16,13 @@ import Web.UIEvent.MouseEvent as ME
 import Web.Event.Event as E
 
 import Data.Argonaut.Core (Json)
+import Data.Argonaut.Core as AC
 import Data.Argonaut.Decode as Decode
 import Data.Argonaut.Decode.Error (JsonDecodeError)
+--import Foreign.Object as Object
+
+import Data.Tuple (Tuple(..))
+
 
 import Data.Either (Either(..))
 import Data.Maybe (Maybe(..))
@@ -23,13 +30,17 @@ import Data.Maybe (Maybe(..))
 import Halogen as H
 import Halogen.HTML.Properties as HP
 import Halogen.HTML as HH
-import Halogen.HTML (ClassName(..))
+import Halogen.HTML ( HTML
+                    , ClassName(..)
+                    )
 
 import Accounting.UI as UI
 import Accounting.UI ( SelectItems
                      , GridPosition(..)
                      , Title(..)
                      )
+import Accounting.ModalDialog as DLG 
+import Accounting.ModalDialog (DialogState(..)) 
 import Accounting.AccountingError (AccountingError(..))
 import Accounting.AccountingError as ERR
 
@@ -43,23 +54,45 @@ type InitDataJson =
   , hourlistgroups :: SelectItems
   }
 
+initDataFromJson :: Json -> Either JsonDecodeError InitDataJson
+initDataFromJson = Decode.decodeJson
+
+type StatusJson = 
+  { ok :: Boolean
+  , msg :: String
+  , oid :: Int
+  }
+
+statusFromJson :: Json -> Either JsonDecodeError StatusJson
+statusFromJson = Decode.decodeJson
+
 type State = 
   { msg :: String
   , invoices :: SelectItems
   , hourlistGroups :: SelectItems
+  , newGroup :: String
+  , dlgNewGroup :: DLG.DialogState
   }
+
+data Field = 
+  NewGroup
 
 data Action
   = SelectChange String
-  | CbChange Boolean
+  | ValueChanged Field String
   | FetchInvoices MouseEvent
+  | NewGroupDlgShow MouseEvent
+  | NewGroupDlgOk MouseEvent
+  | NewGroupDlgCancel MouseEvent
 
-initDataFromJson :: Json -> Either JsonDecodeError InitDataJson
-initDataFromJson = Decode.decodeJson
 
 initURL :: String
 initURL =
     mainURL <>  "/latestdata" 
+
+newGroupURL :: String 
+newGroupURL =
+    mainURL <>  "/newgroup" 
 
 fetchInitData :: forall m. MonadAff m => m (Either AccountingError InitDataJson)
 fetchInitData = 
@@ -83,6 +116,34 @@ fetchInitData =
       in
       pure result
 
+saveNewGroup :: forall m. MonadAff m => String -> m (Either AccountingError StatusJson)
+saveNewGroup newGroup = 
+  let
+    payload :: RequestBody
+    payload = 
+      REQB.json (AC.jsonSingletonObject "name" (AC.fromString newGroup))
+  in
+  H.liftAff $
+    Affjax.post ResponseFormat.json newGroupURL (Just payload) >>= \res ->
+      pure $ 
+        Right { ok: true
+              , msg: "Demo"
+              , oid: 0 
+              }
+
+{-
+demo = 
+  AC.fromObject 
+    ( Object.fromFoldable 
+      [ Tuple "demo"
+          (
+            AC.fromArray 
+              [ AC.jsonSingletonObject "name" (AC.fromString "garp")
+              ]
+          )
+      ]
+    )  -}
+
 initSelectItems :: SelectItems
 initSelectItems =
   [ {v: "0", t: "-"} ]
@@ -93,6 +154,8 @@ component =
     { initialState: \_ -> { msg: "NA"
                           , invoices: initSelectItems
                           , hourlistGroups: initSelectItems
+                          , newGroup: ""
+                          , dlgNewGroup: DialogHidden
                           }
     , render
     , eval: H.mkEval H.defaultEval { handleAction = handleAction }
@@ -114,12 +177,11 @@ render state =
     --fetchInvBtn = UI.gridItem (GridPosition "d2") (UI.mkButton (Title "Hent faktura") FetchInvoices)
     btnInit = UI.mkButton (Title "Hent faktura") FetchInvoices
     btnOk = UI.mkButton (Title "Lagre") FetchInvoices
-    btnNewGroup = UI.mkButton (Title "Ny gruppe") FetchInvoices
+    btnNewGroup = UI.mkButton (Title "Ny gruppe") NewGroupDlgShow 
     btnNewInvoice = UI.mkButton (Title "Ny faktura") FetchInvoices
     btnFakturaposter = UI.mkButton (Title "Fakturaposter") FetchInvoices
 
     buttons = UI.gridItem (GridPosition "d2") (HH.div [ HP.classes [ ClassName "flex"] ] [ btnOk, btnNewGroup, btnNewInvoice, btnFakturaposter, btnInit ])
-    
 
     msg = UI.gridItem (GridPosition "e2") (HH.p_ [ HH.text state.msg ])
     --cb = UI.gridItem (GridPosition "b2") (UI.mkCheckbox (Title "Demo") CbChange)
@@ -136,13 +198,25 @@ render state =
     , to
     , msg
     , buttons
+    , newGroupDialog state.dlgNewGroup
     ]
+
+newGroupDialog :: forall w. DialogState -> HTML w Action
+newGroupDialog dlgState = 
+  let 
+    field = 
+      UI.mkInput (Title "Ny timelistegruppe") InputText (ValueChanged NewGroup) Nothing
+    content = 
+      HH.div_ 
+      [ field 
+      ]
+  in
+  DLG.modalDialog dlgState NewGroupDlgOk NewGroupDlgCancel content
 
 handleAction :: forall cs o m. MonadAff m => Action -> H.HalogenM State Action cs o m Unit
 handleAction = case _ of
-  (SelectChange s) -> H.modify_ \st -> st { msg = s }
-  (CbChange b) -> H.modify_ \st -> st { msg = if b == true then "true"
-                                              else "false" }
+  (SelectChange s) -> 
+    H.modify_ \st -> st { msg = s }
   (FetchInvoices event) -> 
     (H.liftEffect $ E.preventDefault (ME.toEvent event)) *>
     fetchInitData >>= \initData ->
@@ -154,3 +228,16 @@ handleAction = case _ of
                               , invoices = result.invoices 
                               , hourlistGroups = result.hourlistgroups 
                               }
+  (NewGroupDlgShow _) -> 
+    H.modify_ \st -> st { dlgNewGroup = DialogVisible }
+  (NewGroupDlgOk event) -> 
+    (H.liftEffect $ E.preventDefault (ME.toEvent event)) *>
+    H.gets _.newGroup >>= \ng ->
+      saveNewGroup ng >>= \initData ->
+        H.modify_ \st -> st { dlgNewGroup = DialogHidden, msg = st.newGroup }
+  (NewGroupDlgCancel _) -> 
+    H.modify_ \st -> st { dlgNewGroup = DialogHidden }
+  (ValueChanged NewGroup s) ->
+    H.modify_ \st -> st { newGroup = s }
+
+
