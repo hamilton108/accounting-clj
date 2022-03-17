@@ -219,25 +219,30 @@ handleAction = case _ of
     H.modify_ \st -> st { msg = s }
   (FetchInvoices event) -> 
     (H.liftEffect $ E.preventDefault (ME.toEvent event)) *>
-    fetchInitData >>= \initData ->
-      case initData of 
+    fetchInitData >>= \result ->
+      case result of 
         Left err -> 
           H.modify_ \st -> st { msg = "Fetch invoices FAIL: " <> ERR.errToString err }
-        Right result -> 
+        Right result1 -> 
           H.modify_ \st -> st { msg = "Fetch invoices"
-                              , invoices = result.invoices 
-                              , hourlistGroups = result.hourlistgroups 
+                              , invoices = result1.invoices 
+                              , hourlistGroups = result1.hourlistgroups 
                               }
   (NewGroupDlgShow _) -> 
     H.modify_ \st -> st { dlgNewGroup = DialogVisible }
   (NewGroupDlgOk event) -> 
     (H.liftEffect $ E.preventDefault (ME.toEvent event)) *>
     H.gets _.newGroup >>= \ng ->
-      saveNewGroup ng >>= \initData ->
-        H.modify_ \st -> st { dlgNewGroup = DialogHidden, msg = st.newGroup }
+      saveNewGroup ng >>= \result ->
+        case result of  
+          Left err ->
+            H.modify_ \st -> st { msg = "Save new group FAIL: " <> ERR.errToString err }
+          Right result1 ->
+            H.modify_ \st -> st { dlgNewGroup = DialogHidden, msg = st.newGroup }
   (NewGroupDlgCancel _) -> 
     H.modify_ \st -> st { dlgNewGroup = DialogHidden }
   (ValueChanged NewGroup s) ->
     H.modify_ \st -> st { newGroup = s }
+    
 
 
