@@ -74,7 +74,7 @@ type alias Model =
     , bilag : Int
     , date : Field
     , desc : Field
-    , belop : FloatField
+    , belop : Field 
     , mvaAmount : FloatField
     , mva : Bool
     , selectedNs4102 : IntField
@@ -191,7 +191,8 @@ view model =
             numberInput BilagChanged (LabelText "Bilag") (Just (String.fromInt model.bilag))
 
         belop =
-            numberInput BelopChanged (LabelText "Beløp") (Maybe.map String.fromFloat model.belop)
+            textInput BelopChanged (LabelText "Beløp") model.belop
+            -- numberInput BelopChanged (LabelText "Beløp") (Maybe.map String.fromFloat model.belop)
 
         mvaAmount =
             numberInput MvaChanged (LabelText "Mva beløp") (Maybe.map String.fromFloat model.mvaAmount)
@@ -257,13 +258,27 @@ view model =
     H.div [ A.class "accounting-grid" ] items
 
 
-calcMvaAmount : Bool -> FloatField -> FloatField
+str2float : String -> FloatField
+str2float s = 
+    let 
+        sx = String.replace "," "." s
+    in
+    String.toFloat sx
+
+calcMvaAmount : Bool -> Field -> FloatField
 calcMvaAmount cb belop =
     if cb == False then
         Nothing
 
     else
-        Maybe.map ((*) 0.2) belop
+        case belop of 
+            Nothing -> Nothing
+
+            Just belop2 -> 
+                let 
+                    belopx = str2float belop2
+                in
+                Maybe.map ((*) 0.2) belopx
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -301,7 +316,8 @@ update msg model =
         BelopChanged s ->
             let
                 newBelop =
-                    String.toFloat s
+                    Just s
+                    -- String.toFloat s
 
                 curMvaAmount =
                     calcMvaAmount model.mva newBelop
@@ -476,7 +492,7 @@ saveToDb :
         , date : Field
         , selectedNs4102 : IntField
         , desc : Field
-        , belop : FloatField
+        , belop : Field
         , mvaAmount : FloatField
     }
     -> Cmd Msg
@@ -503,7 +519,7 @@ saveToDb model =
                                                                 , ( "curdate", JE.string dx )
                                                                 , ( "debit", JE.int ns4102 )
                                                                 , ( "desc", JE.string dsc )
-                                                                , ( "amount", JE.float blp )
+                                                                , ( "amount", JE.string blp )
                                                                 , ( "mva", JE.float mva )
                                                                 ]
                                                         )
